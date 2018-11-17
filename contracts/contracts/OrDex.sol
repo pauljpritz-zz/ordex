@@ -1,5 +1,5 @@
 pragma solidity ^0.4.24;
-import "./erc20.sol";
+import "./ierc20.sol";
 
 contract OrDex {
 
