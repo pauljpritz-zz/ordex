@@ -11,7 +11,13 @@
       "timestamp": {"type": "number"},
       "address": {"type": "string"}
     },
-    "required": ["amount", "source", "target", "timestamp", "address"]
+    "required": [
+      "sourceAmount",
+      "targetAmount",
+      "sourceToken",
+      "targetToken",
+      "address"
+    ]
   },
   "signature": {
     "id": "/Signature",

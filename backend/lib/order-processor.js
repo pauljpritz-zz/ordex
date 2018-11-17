@@ -34,6 +34,14 @@ class OrderProcessor {
     });
   }
 
+  removeAllOffers() {
+    const offers = this.db.offers.query(() => true);
+    const promises = _.map(offers, (v) => this.db.offers.del(v._id));
+    return Promise.all(promises).then(() => {
+      console.log("removed everyting");
+    });
+  }
+
   register(ws, args) {
     if (!args.address) {
       console.error('missing address');

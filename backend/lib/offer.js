@@ -4,6 +4,8 @@ const schemas = require('./schemas');
 
 const validator = new Validator();
 
+const BLOCK_OFFSET = 4 * 15;
+
 
 class Offer {
   constructor(props) {
@@ -16,7 +18,10 @@ class Offer {
       throw new Error(`invalid JSON: ${JSON.stringify(result.errors)}`);
     }
 
-    return new Offer(_.assign({}, offer, {currentBlock: currentBlock}));
+    return new Offer(_.assign({
+      expiry: currentBlock + BLOCK_OFFSET,
+      timestamp: new Date().getTime()
+    }, offer));
   }
 
 }
