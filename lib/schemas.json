@@ -12,5 +12,14 @@
       "address": {"type": "string"}
     },
     "required": ["amount", "source", "target", "timestamp", "address"]
+  },
+  "signature": {
+    "id": "/Signature",
+    "type": "object",
+    "properties": {
+      "transactionID": {"type": "string"},
+      "address": {"type": "string"},
+      "signature": {"type": "string"}
+    }
   }
 }
