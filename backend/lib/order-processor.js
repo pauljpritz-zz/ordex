@@ -3,6 +3,7 @@ const Web3 = require('web3');
 const uuid = require('uuid/v4');
 const Validator = require('jsonschema').Validator;
 const schemas = require('./schemas');
+const OrderEngine = require('./order-engine');
 
 const validator = new Validator();
 
@@ -44,8 +45,27 @@ class OrderProcessor {
   publishOffer(offer) {
     const id = uuid();
     return this.db.offers.put(_.assign({_id: id}, offer)).then((hash) => {
-      return {hash: hash, _id: id};
-    });
+      return _.assign({hash: hash, _id: id}, offer);
+    })
+  }
+
+  searchForAvailableTransactions(lastOffer) {
+    const offers = this.db.offers.query(() => true);
+    const engine = new OrderEngine(lastOffer.sourceToken, lastOffer.targetToken, offers);
+    const transactions = engine.matchTransaction();
+    for (const transaction of transactions) {
+      this.multicastTransaction(transaction);
+    }
+  }
+
+  formatTransaction(transaction, i) {
+    return {
+      addresses: transaction.addresses[i],
+      expiry: transaction.expiries[i],
+      tokens: [transaction.tokens[i], transaction.tokens[1 - i]],
+      nonce: transaction.nonces[i],
+      amounts: [transaction.amounts[i], transaction.amounts[1 - i]],
+    };
   }
 
   receiveSignature(input) {
@@ -66,13 +86,41 @@ class OrderProcessor {
       throw new Error(`address ${input.address} not in transaction`);
     }
 
+    const notifyClient = (i) => {
+      const message = {
+        action: 'transactionDone',
+        args: this.formatTransaction(i)
+      }
+      this.sendMessage(message, transaction.addresses[i]);
+    };
+
     if (transaction.signatures[0] && transaction.signatures[1]) {
       return this.executeTransaction(transaction).then(() => {
         return this.db.transactions.del(input.transactionID);
+      })
+      .then(() => {
+        notifyClient(0);
+        notifyClient(1);
       });
     }
     return this.db.transactions.put(transaction);
   }
+
+  executeTransaction(transaction) {
+    // TODO: call Sam code's
+  }
+
+  sendMessage(message, address) {
+    const client = this.clients[address];
+    if (client) {
+      return client.send(message);
+    }
+    if (!this.messageQueue[address]) {
+      this.messageQueue[address] = [];
+    }
+    this.messageQueue[address].push(message);
+  }
+
 
   multicastTransaction(transaction) {
     /*
@@ -101,16 +149,6 @@ class OrderProcessor {
       signatures: [null, null]
     };
 
-    const makeTransaction = (i) => {
-      return {
-        addresses: toPersist.addresses[i],
-        expiry: toPersist.expiries[i],
-        tokens: [toPersist.tokens[i], toPersist.tokens[1 - i]],
-        nonce: toPersist.nonces[i],
-        amounts: [toPersist.amounts[i], toPersist.amounts[1 - i]],
-      };
-    };
-
     const makeStringToSign = (transactionObject) => {
       return Web3.utils.soliditySha3(
         {type: 'string', value: 'OrDex'},
@@ -124,7 +162,7 @@ class OrderProcessor {
     };
 
     const makeMessage = (i) => {
-      const transactionObject = makeTransaction(i);
+      const transactionObject = this.formatTransaction(toPersist, i);
       const stringToSign = makeStringToSign(transactionObject);
       return {
         id: toPersist.id,
@@ -134,16 +172,11 @@ class OrderProcessor {
     };
 
     const sendMessage = (i) => {
-      const address = toPersist.addresses[i]
-      const client = this.clients[address];
-      const message = makeMessage(i);
-      if (client) {
-        return client.send(message);
+      const message = {
+        action: 'requireSignature',
+        args: makeMessage(i)
       }
-      if (!this.messageQueue[address]) {
-        this.messageQueue[address] = [];
-      }
-      this.messageQueue[address].push(message);
+      this.sendMessage(message, toPersist.addresses[i]);
     };
 
     sendMessage(0);

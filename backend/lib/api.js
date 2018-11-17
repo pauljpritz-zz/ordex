@@ -17,11 +17,26 @@ module.exports = function (db, w3) {
     w3.eth.getBlockNumber()
     .then((number) => Offer.fromJSON(req.body, number))
     .then((offer) => orderProcessor.publishOffer(offer))
-    .then((result) => res.json(result))
+    .then((offer) => {
+      res.json(offer);
+      return offer;
+    })
+    .then((offer) => orderProcessor.searchForAvailableTransactions(offer))
     .catch((err) => {
       res.status(400);
       res.json({error: err});
     });
+  });
+
+  app.post('/signature', (req, res) => {
+    try {
+      const promise = orderProcessor.receiveSignature(req.body);
+      res.json({state: 'pending'});
+      return promise;
+    } catch (err) {
+      res.status(400);
+      res.json({error: err});
+    }
   });
 
   app.get('/tokens', (req, res) => {
