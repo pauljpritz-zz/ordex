@@ -3,9 +3,11 @@
     "id": "/Offer",
     "type": "object",
     "properties": {
-      "amount": {"type": "number"},
-      "source": {"type": "string"},
-      "target": {"type": "string"},
+      "sourceAmount": {"type": "number"},
+      "targetAmount": {"type": "number"},
+      "expiry": {"type": "number"},
+      "sourceToken": {"type": "string"},
+      "targetToken": {"type": "string"},
       "timestamp": {"type": "number"},
       "address": {"type": "string"}
     },

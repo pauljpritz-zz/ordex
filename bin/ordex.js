@@ -6,9 +6,13 @@ const createW3 = require('../lib/eth-client');
 
 const port = 3000;
 
-createDB((db) => {
+Promise.all([
+  createDB('offers'),
+  createDB('transactions'),
+]).then((dbArray) => {
+  const dbs = {offers: dbArray[0], transactions: dbArray[1]};
   const w3 = createW3();
-  const api = createAPI(db, w3);
+  const api = createAPI(dbs, w3);
   api.listen(port, () => {
     console.log(`Example app listening on port ${port}!`);
   });
