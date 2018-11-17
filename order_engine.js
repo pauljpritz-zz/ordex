@@ -91,7 +91,7 @@ class OrderBook {
 
 
 //TESTS
-
+/*
 test_order1 = {}
 test_order1["address"] = "addr1";
 test_order1["source"] = "ETH";
@@ -145,3 +145,4 @@ test_transactions = test_order_book.matchTransaction()
 console.log("Transactions: ", test_transactions)
 console.log("Remaining asks: ", test_order_book.asks)
 
+*/
