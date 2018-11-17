@@ -1,3 +1,5 @@
+const Transaction = require('./transaction');
+
 
 function compare(a, b) {
     const time_a = a.timestamp;
@@ -10,17 +12,6 @@ function compare(a, b) {
         comparison = -1;
     }
     return comparison;
-}
-
-class Transaction {
-    constructor(buyer, seller, source, target, source_amount, target_amount) {
-        this.buyer = buyer;
-        this.seller = seller;
-        this.source_amount = source_amount;
-        this.target_amount = target_amount;
-        this.source = source;
-        this.target = target;
-    }
 }
 
 class OrderBook {
