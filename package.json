@@ -1,6 +1,8 @@
 {
   "name": "ordex",
   "dependencies": {
-    "express": "^4.16.4"
+    "express": "^4.16.4",
+    "ipfs": "^0.33.1",
+    "orbit-db": "^0.19.9"
   }
 }
