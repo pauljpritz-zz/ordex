@@ -3,6 +3,8 @@
   "dependencies": {
     "express": "^4.16.4",
     "ipfs": "^0.33.1",
-    "orbit-db": "^0.19.9"
+    "jsonschema": "^1.2.4",
+    "orbit-db": "^0.19.9",
+    "uuid": "^3.3.2"
   }
 }

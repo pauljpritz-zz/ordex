@@ -1,0 +1,14 @@
+{
+  "offer": {
+    "id": "/Offer",
+    "type": "object",
+    "properties": {
+      "amount": {"type": "number"},
+      "source": {"type": "string"},
+      "target": {"type": "string"},
+      "timestamp": {"type": "number"},
+      "address": {"type": "string"}
+    },
+    "required": ["amount", "source", "target", "timestamp", "address"]
+  }
+}
