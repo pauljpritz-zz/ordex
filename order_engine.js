@@ -33,29 +33,29 @@ class OrderBook {
                 this.asks.push(this.all_orders[i]);
             }
         }
-        console.log(this.asks)
-        console.log(this.bids)
     }
       
 
     matchTransaction() {
         var transactions = [];
-        while ((this.bids.lenght > 0) && (this.asks.length > 0)) {
+        while ((this.bids.length > 0) && (this.asks.length > 0)) {
             var buy_order = this.bids.shift();
             var sell_order = this.asks.shift();
 
 
             if (buy_order.target_amount == sell_order.source_amount &&
                 (buy_order.target_amount / buy_order.source_amount) == (sell_order.source_amount / sell_order.target_amount)) {
-                transactions.push(new Transaction(
+                var new_transaction = new Transaction(
                     buy_order.address,
                     sell_order.address,
                     buy_order.source,
                     buy_order.target,
                     buy_order.source_amount,
-                    buy_order.target_amount))
+                    buy_order.target_amount);
+                console.log("MATCH")
+                transactions.push(new_transaction)
             }
-            else if (buy_order.target_amount < sell_order.source_amount && 
+            else if (buy_order.target_amount < sell_order.source_amount &&
                 (buy_order.target_amount / buy_order.source_amount) == (sell_order.source_amount / sell_order.target_amount)) {
                 transactions.push(new Transaction(
                     buy_order.address,
@@ -68,7 +68,7 @@ class OrderBook {
                 buy_order.source_amount -= sell_order.target_amount;
                 this.asks.unshift(sell_order)
             }
-            else if (sell_order.target_amount < buy_order.source_amount && 
+            else if (buy_order.target_amount > sell_order.source_amount &&
                 (buy_order.target_amount / buy_order.source_amount) == (sell_order.source_amount / sell_order.target_amount)) {
                 transactions.push(new Transaction(
                     buy_order.address,
@@ -80,6 +80,9 @@ class OrderBook {
                 sell_order.source_amount -= buy_order.target_amount;
                 buy_order.source_amount -= sell_order.target_amount;
                 this.bids.unshift(buy_order)
+            }
+            else {
+                this.asks.unshift(sell_order);
             }
         }
         return transactions;
@@ -105,7 +108,31 @@ test_order2["target_amount"] = 100;
 test_order2["source_amount"] = 100;
 test_order2["timestamp"] = 10;
 
-test_orders = [test_order1, test_order2];
+test_order3 = {}
+test_order3["address"] = "addr3";
+test_order3["source"] = "BTC";
+test_order3["target"] = "ETH";
+test_order3["target_amount"] = 90;
+test_order3["source_amount"] = 100;
+test_order3["timestamp"] = 10;
+
+test_order4 = {}
+test_order4["address"] = "addr4";
+test_order4["source"] = "ETH";
+test_order4["target"] = "BTC";
+test_order4["target_amount"] = 50;
+test_order4["source_amount"] = 45;
+test_order4["timestamp"] = 10;
+
+test_order5 = {}
+test_order5["address"] = "addr5";
+test_order5["source"] = "ETH";
+test_order5["target"] = "BTC";
+test_order5["target_amount"] = 75;
+test_order5["source_amount"] = 69;
+test_order5["timestamp"] = 10;
+
+test_orders = [test_order1, test_order2, test_order3, test_order4, test_order5];
 console.log(test_orders[0])
 
 test_order_book = new OrderBook("ETH", "BTC", test_orders);
@@ -114,5 +141,7 @@ console.log("Order book:", test_order_book.all_orders)
 
 test_order_book.queueOrders();
 test_transactions = test_order_book.matchTransaction()
-console.log(test_transactions)
+
+console.log("Transactions: ", test_transactions)
+console.log("Remaining asks: ", test_order_book.asks)
 
