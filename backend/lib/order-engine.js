@@ -39,6 +39,8 @@ class OrderEngine {
 
     makeTransaction(buyOrder, sellOrder) {
         return new Transaction(
+            buyOrder._id,
+            sellOrder._id,
             buyOrder.address,
             sellOrder.address,
             buyOrder.sourceToken,

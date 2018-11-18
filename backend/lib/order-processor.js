@@ -82,10 +82,11 @@ class OrderProcessor {
     if (result.errors && result.errors.length > 0) {
       throw new Error(`invalid JSON: ${JSON.stringify(result.errors)}`);
     }
-    const transaction = this.db.transactions.get(input.transactionID);
+    let transaction = this.db.transactions.get(input.transactionID);
     if (!transaction) {
       throw new Error(`transaction ${input.transactionID} does not exist`);
     }
+    transaction = transaction[0];
 
     if (transaction.addresses[0] === input.address) {
       transaction.signatures[0] = input.signature;
@@ -202,7 +203,7 @@ class OrderProcessor {
       const transactionObject = this.formatTransaction(toPersist, i);
       const stringToSign = makeStringToSign(transactionObject);
       return {
-        id: toPersist.id,
+        id: toPersist._id,
         transaction: transaction,
         stringToSign: stringToSign
       };

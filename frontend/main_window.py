@@ -115,11 +115,25 @@ class App(QWidget):
     def _on_message_received(self, text):
         parsed = json.loads(text)
         if parsed["action"] == "requireSignature":
-            self.prompt_signature(parsed["args"]["transaction"])
+            self.prompt_signature(parsed["args"])
     
-    def prompt_signature(self, transaction):
-        res = TransactionDialog.showTransactionDialog(transaction, self)
-        print(res)
+    def prompt_signature(self, args):
+        res = TransactionDialog.showTransactionDialog(args["transaction"], self)
+        if res:
+            self.send_signature(args)
+
+    def send_signature(self, args):
+        signature = "TODO: generate real signature"
+        print(args)
+        r = requests.post(self._endpoint("signature"), json=dict(
+            signature=signature,
+            address=self.account,
+            transactionID=args["id"],
+        ))
+        if r.status_code == 200:
+            self.show_success("Transaction accepted", "Your transaction has been accepted and is being processed")
+        else:
+            self.show_failure("Transaction refused", "Your transaction has been declined")
 
     @pyqtSlot()
     def handle_send(self):
@@ -139,19 +153,26 @@ class App(QWidget):
         ))
 
         if r.status_code == 200:
-            success = QMessageBox(self)
-            success.setText("Order has been successfully submitted")
-            success.setWindowTitle("Order status")
-            success.setIcon(QMessageBox.Information)
-            success.setStandardButtons(QMessageBox.Ok)
-            success.exec_()
+            self.show_success("Order status", "Order has been successfully submitted")
         else:
-            failure = QMessageBox(self)
-            failure.setText("Failure submitting order, please try again")
-            failure.setWindowTitle("Order status")
-            failure.setIcon(QMessageBox.Critical)
-            failure.setStandardButtons(QMessageBox.Ok)
-            failure.exec_()
+            self.show_failure("Order status", "Failure submitting order, please try again")
+            
+
+    def show_success(self, title, message):
+        success = QMessageBox(self)
+        success.setText(message)
+        success.setWindowTitle(title)
+        success.setIcon(QMessageBox.Information)
+        success.setStandardButtons(QMessageBox.Ok)
+        success.exec_()
+
+    def show_failure(self, title, message):
+        failure = QMessageBox(self)
+        failure.setText(message)
+        failure.setWindowTitle(title)
+        failure.setIcon(QMessageBox.Critical)
+        failure.setStandardButtons(QMessageBox.Ok)
+        failure.exec_()
 
     def approve_transaction(self, source_token, source_amount):
         address = [v["address"] for v in self.tokens if v["name"] == source_token][0]
