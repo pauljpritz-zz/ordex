@@ -10,21 +10,17 @@ import json
 
 
 from PyQt5.QtWidgets import QApplication, QWidget, QInputDialog, QLineEdit, QVBoxLayout, QHBoxLayout
-from PyQt5.QtWidgets import QLabel, QPushButton, QComboBox, QMessageBox
-from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtWidgets import QLabel, QPushButton, QComboBox, QMessageBox, QDialog, QDialogButtonBox
+from PyQt5 import QtWebSockets
+from PyQt5.QtCore import pyqtSlot, QUrl
 from PyQt5.QtGui import QIntValidator
 
 
 
 ENDPOINT = "http://localhost:3000"
+WS_ENDPOINT = "ws://localhost:3000"
 W3_ENDPOINT = "http://127.0.0.1:7545"
 
-
-async def connect(address, id):
-    async with websockets.connect(address) as websocket:
-        websocket.send(id)
-
-        transaction = await websocket.recv()
 
 
 def get_tokens():
@@ -36,18 +32,51 @@ def load_erc20_abi():
         return json.load(f)
 
 
+class TransactionDialog(QDialog):
+    def __init__(self, transaction, parent=None):
+        super().__init__(parent)
+        self.transaction = transaction
+        self.initUI()
+     
+    def initUI(self):
+        self.setWindowTitle("Transaction offer received")
+        self.setFixedSize(400, 200)
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("Source token: {0}".format(self.transaction["source"])))
+        layout.addWidget(QLabel("Source amount: {0}".format(self.transaction["sourceAmount"])))
+        layout.addWidget(QLabel("Target token: {0}".format(self.transaction["target"])))
+        layout.addWidget(QLabel("Target amount: {0}".format(self.transaction["targetAmount"])))
+
+        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttonsLayout = QHBoxLayout()
+        buttonBox.accepted.connect(self.accept)
+        buttonBox.rejected.connect(self.reject)
+        buttonsLayout.addWidget(buttonBox)
+        layout.addLayout(buttonsLayout)
+        self.setLayout(layout)
+         
+    @classmethod
+    def showTransactionDialog(cls, transaction, parent=None):
+        c = cls(transaction, parent)
+        b = c.exec_()
+        return b
+        
+
+
 class App(QWidget):
-    def __init__(self):
+    def __init__(self, account_number):
         super().__init__()
         self.title = 'Ordex Decentralized Exchange'
         self.layout = QVBoxLayout()
         self.tokens = get_tokens()
         self.w3 = web3.Web3(web3.HTTPProvider(W3_ENDPOINT))
-        self.account = self.w3.personal.listAccounts[0]
         self.initUI()
         self.ordex_address = os.environ.get("ORDEX_ADDRESS", "0x97a0D266F6DE4669698De2a07714552AEc643717")
         self.erc20_abi = load_erc20_abi()
-        self.w3.eth.defaultAccount = self.w3.eth.accounts[0]
+
+        self.account = self.w3.personal.listAccounts[account_number]
+        self.w3.eth.defaultAccount = self.account
+        self.connect_websocket()
 
     def initUI(self):
         self.setWindowTitle(self.title)
@@ -65,6 +94,32 @@ class App(QWidget):
         self.layout.addWidget(button)
 
         self.show()
+
+    def connect_websocket(self):
+        self.client = QtWebSockets.QWebSocket("", QtWebSockets.QWebSocketProtocol.Version13, None)
+        self.client.error.connect(self.handle_error)
+
+        self.client.open(QUrl(WS_ENDPOINT))
+        self.client.connected.connect(self._on_connected)
+        self.client.textMessageReceived.connect(self._on_message_received)
+
+    @pyqtSlot()
+    def handle_error(self, err):
+        print("error", err)
+
+    @pyqtSlot()
+    def _on_connected(self):
+        message = dict(action="register", args=dict(address=self.account))
+        self.client.sendTextMessage(json.dumps(message))
+
+    def _on_message_received(self, text):
+        parsed = json.loads(text)
+        if parsed["action"] == "requireSignature":
+            self.prompt_signature(parsed["args"]["transaction"])
+    
+    def prompt_signature(self, transaction):
+        res = TransactionDialog.showTransactionDialog(transaction, self)
+        print(res)
 
     @pyqtSlot()
     def handle_send(self):
@@ -84,14 +139,14 @@ class App(QWidget):
         ))
 
         if r.status_code == 200:
-            success = QMessageBox()
+            success = QMessageBox(self)
             success.setText("Order has been successfully submitted")
             success.setWindowTitle("Order status")
             success.setIcon(QMessageBox.Information)
             success.setStandardButtons(QMessageBox.Ok)
             success.exec_()
         else:
-            failure = QMessageBox()
+            failure = QMessageBox(self)
             failure.setText("Failure submitting order, please try again")
             failure.setWindowTitle("Order status")
             failure.setIcon(QMessageBox.Critical)
@@ -124,8 +179,12 @@ class App(QWidget):
 
 
 if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--account-number", default=0, type=int)
+    args = parser.parse_args()
     app = QApplication(sys.argv)
-    ex = App()
+    ex = App(args.account_number)
     sys.exit(app.exec_())
 
 

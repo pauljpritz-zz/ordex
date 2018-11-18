@@ -26,7 +26,7 @@ class OrderProcessor {
       const parsedMessage = JSON.parse(msg);
       switch (parsedMessage.action) {
       case 'register':
-        this.register(ws, msg.args);
+        this.register(ws, parsedMessage.args);
         break;
       default:
         console.error(`message not understood: ${msg}`);
@@ -47,6 +47,7 @@ class OrderProcessor {
       console.error('missing address');
       return;
     }
+    console.log(`registered address ${args.address}`);
     this.clients[args.address] = ws;
   }
 
@@ -149,7 +150,7 @@ class OrderProcessor {
   sendMessage(message, address) {
     const client = this.clients[address];
     if (client) {
-      return client.send(message);
+      return client.send(JSON.stringify(message));
     }
     if (!this.messageQueue[address]) {
       this.messageQueue[address] = [];

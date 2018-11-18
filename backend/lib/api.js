@@ -11,7 +11,7 @@ require('express-ws')(app);
 
 module.exports = function (db, w3) {
   const orderProcessor = new OrderProcessor(w3, db);
-  app.ws('/', orderProcessor.handleConnection);
+  app.ws('/', orderProcessor.handleConnection.bind(orderProcessor));
 
   app.post('/offer', (req, res) => {
     w3.eth.getBlockNumber()
@@ -21,11 +21,11 @@ module.exports = function (db, w3) {
       res.json(offer);
       return offer;
     })
-    .then((offer) => orderProcessor.searchForAvailableTransactions(offer))
     .catch((err) => {
       res.status(400);
       res.json({error: err});
-    });
+    })
+    .then((offer) => orderProcessor.searchForAvailableTransactions(offer));
   });
 
   app.post('/signature', (req, res) => {
