@@ -140,7 +140,10 @@ class OrderProcessor {
     }
 
   executeTransaction(transaction) {
-    // TODO: call Sam code's
+    var promises=[]
+    var contract = web3.eth.Contract(require("./OrDex.json"), "0xb6d405cc54e11282d71f8724179bcfcb42b696bf9a758316ba208c432ed48bda");
+    promises.push(contract.swap(transaction.addresses, transactions.tokens, transactions.amounts, transactions.nonces, transactions.exiry));
+    return Promise.all(promises);
   }
 
   sendMessage(message, address) {
