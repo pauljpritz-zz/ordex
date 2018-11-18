@@ -1,17 +1,9 @@
 pragma solidity ^0.4.24;
 
-
 import "./ierc20.sol";
 import "./SafeMath.sol";
 
-/**
- * @title Standard ERC20 token
- *
- * @dev Implementation of the basic standard token.
- * https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20.md
- * Originally based on code by FirstBlood: https://github.com/Firstbloodio/token/blob/master/smart_contract/FirstBloodToken.sol
- */
-contract ERC20 is IERC20 {
+contract ERC20_2 is IERC20 {
   using SafeMath for uint256;
 
   string name;
@@ -26,12 +18,8 @@ contract ERC20 is IERC20 {
 
   constructor(string _name) public {
     name = _name;
-    _mint(msg.sender, 10);
-    emit Balance(msg.sender, 10);
-  }
-
-  function printName() public view returns (uint256) {
-    return 100;
+    _mint(msg.sender, 20);
+    emit Balance(msg.sender, 20);
   }
 
   /**

@@ -1,7 +1,7 @@
-var erc20_1 = artifacts.require("./erc20.sol");
-var erc20_2 = artifacts.require("./erc20.sol");
+var ERC20 = artifacts.require("./erc20.sol");
+var ERC20_2 = artifacts.require("./erc20_2.sol");
 
 module.exports = function(deployer) {
-  deployer.deploy(erc20_1, "CatToken");
-  deployer.deploy(erc20_2, "DogToken");
+  deployer.deploy(ERC20, "CatToken");
+  deployer.deploy(ERC20_2, "DogToken");
 };
