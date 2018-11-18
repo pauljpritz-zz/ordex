@@ -1,6 +1,6 @@
-var OrDex = artifacts.require("./contracts/OrDex.sol");
-var ERC20 = artifacts.require("./contracts/erc20.sol");
-var ERC20_2 = artifacts.require("./contracts/erc20_2.sol");
+var OrDex = artifacts.require("./OrDex.sol");
+var ERC20 = artifacts.require("./ERC20.sol");
+var ERC20_2 = artifacts.require("./ERC20_2.sol");
 
 
 contract('1st OrDex test', async (accounts) => {

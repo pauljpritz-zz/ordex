@@ -1,5 +1,5 @@
-var ERC20 = artifacts.require("./erc20.sol");
-var ERC20_2 = artifacts.require("./erc20_2.sol");
+var ERC20 = artifacts.require("./ERC20.sol");
+var ERC20_2 = artifacts.require("./ERC20_2.sol");
 
 module.exports = function(deployer) {
   deployer.deploy(ERC20, "CatToken");
