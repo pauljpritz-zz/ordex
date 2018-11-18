@@ -6,11 +6,14 @@ const schemas = require('./schemas');
 const OrderEngine = require('./order-engine');
 
 const validator = new Validator();
+const ordex = require('./OrDex.json');
 
 
 function getRandomInt(max) {
   return Math.floor(Math.random() * Math.floor(max));
 }
+
+const ORDEX_CONTRACT_ADDRESS = '0xE8076F73F08A2b85589260Af1747702eE6274d53';
 
 
 class OrderProcessor {
@@ -99,13 +102,14 @@ class OrderProcessor {
     const notifyClient = (i) => {
       const message = {
         action: 'transactionDone',
-        args: this.formatTransaction(i)
+        args: this.formatTransaction(transaction, i)
       }
       this.sendMessage(message, transaction.addresses[i]);
     };
 
     if (transaction.signatures[0] && transaction.signatures[1]) {
         return this.executeTransaction(transaction).then(() => {
+          console.log('transaction executed on THE BLOCKCHAIN');
             return this.updateDbOrderBook(transaction);
         })
       .then(() => {
@@ -114,38 +118,47 @@ class OrderProcessor {
       .then(() => {
         notifyClient(0);
         notifyClient(1);
+      })
+      .catch((err) => {
+        console.log(err);
       });
     }
     return this.db.transactions.put(transaction);
   }
 
     updateDbOrderBook(transaction) {
-        sell_offer = self.db.offers.get(transaction.target_id)
-        buy_offer = self.db.offers.get(transaction.source_id)
-        sell_offer.sourceAmount -= transaction.targetAmount
-        buy_offer.targetAmount -= transaction.sourceAmount
-        var promises = []
-        if (buy_offer.sourceAmount != 0) {
-            promises.push(self.db.offers.put(buy_offer))
-        }
-        else if (buy_offer.sourceAmount == 0) {
-            promises.push(self.db.offers.del(buy_offer))
-        }
-        if (sell_offer.targetAmount != 0) {
-            promises.push(self.db.offers.put(sell_offer))
-        }
-        else if (sell_offer == 0) {
-            promises.push(self.db.offers.del(sell_offer))
-        }
-        return Promise.all(promises);
-
+      console.log(transaction);
+      const sellOffer = this.db.offers.get(transaction.offers[0])[0]
+      const buyOffer = this.db.offers.get(transaction.offers[1])[0]
+      sellOffer.sourceAmount -= transaction.targetAmount
+      buyOffer.targetAmount -= transaction.sourceAmount
+      const promises = [];
+      if (buyOffer.sourceAmount === 0) {
+        promises.push(this.db.offers.del(buyOffer))
+      } else {
+        promises.push(this.db.offers.put(buyOffer))
+      }
+      if (sellOffer.targetAmount === 0) {
+        promises.push(this.db.offers.del(sellOffer))
+      } else {
+        promises.push(this.db.offers.put(sellOffer))
+      }
+      return Promise.all(promises);
     }
 
   executeTransaction(transaction) {
-    var promises=[]
-    var contract = web3.eth.Contract(require("./OrDex.json"), "0xb6d405cc54e11282d71f8724179bcfcb42b696bf9a758316ba208c432ed48bda");
-    promises.push(contract.swap(transaction.addresses, transactions.tokens, transactions.amounts, transactions.nonces, transactions.exiry));
-    return Promise.all(promises);
+    const abi = ordex["abi"];
+    const contract = new this.w3.eth.Contract(abi, ORDEX_CONTRACT_ADDRESS);
+    console.log('executing contract');
+    const ret = contract.methods.swap(
+      transaction.addresses,
+      transaction.tokens,
+      transaction.amounts,
+      transaction.nonces,
+      transaction.expiries
+    );
+    console.log(ret);
+    return Promise.resolve(transaction);
   }
 
   sendMessage(message, address) {
@@ -179,6 +192,7 @@ class OrderProcessor {
 
     const toPersist = {
       _id: uuid(),
+      offers: [transaction.source_id, transaction.target_id],
       addresses: [transaction.buyer, transaction.seller],
       amounts: [transaction.sourceAmount, transaction.targetAmount],
       tokens: [transaction.source, transaction.target],

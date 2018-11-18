@@ -116,6 +116,8 @@ class App(QWidget):
         parsed = json.loads(text)
         if parsed["action"] == "requireSignature":
             self.prompt_signature(parsed["args"])
+        elif parsed["action"] == "transactionDone":
+            self.show_success("Transaction done", "The transaction has been published on THE BLOCKCHAIN")
     
     def prompt_signature(self, args):
         res = TransactionDialog.showTransactionDialog(args["transaction"], self)
