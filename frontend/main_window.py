@@ -4,11 +4,12 @@ from os import path
 import web3
 import websockets
 import requests
+import os
 import asyncio
 
 
 from PyQt5.QtWidgets import QApplication, QWidget, QInputDialog, QLineEdit, QVBoxLayout, QHBoxLayout
-from PyQt5.QtWidgets import QLabel, QPushButton, QComboBox
+from PyQt5.QtWidgets import QLabel, QPushButton, QComboBox, QMessageBox
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtGui import QIntValidator
 
@@ -38,6 +39,7 @@ class App(QWidget):
         self.tokens = get_tokens()
         self.account = w3.personal.listAccounts[0]
         self.initUI()
+        self.ordex_address = os.environ.get("ORDEX_ADDRESS")
 
     def initUI(self):
         self.setWindowTitle(self.title)
@@ -64,6 +66,8 @@ class App(QWidget):
         print(self.target_amount.text())
 
     def send_request(self):
+        self.approve_transaction(self.source.text())
+
         r = requests.post(self._endpoint("offer"), json=dict(
             sourceAmount=int(self.source_amount.text()),
             targetAmount=int(self.target_amount.text()),
@@ -71,16 +75,25 @@ class App(QWidget):
             targetToken=self.target.currentText(),
             address=self.account
         ))
-        if r.status_code == 200:
-            pass
-            # TODO: show a dialog for success
-        else:
-            pass
-            # TODO: show a failure dialog
 
-    def get_address(self):
-        # TODO: do something useful
-        return "123467"
+        if r.status_code == 200:
+            success = QMessageBox(title="Order status", text="Order has been successfully submitted")
+            success.setIcon(QMessageBox.Information)
+            success.setStandardButtons(QMessageBox.Ok)
+            success.exec_()
+        else:
+            failure = QMessageBox(title="Order status"., text="Failure submitting order, please try again")
+            failure.setIcon(QMessageBox.Critical)
+            failure.setStandardButtons(QMessageBox.Ok)
+            failure.exec_()
+
+
+    def approve_transaction(self, amount):
+        try:
+            
+            return True
+        except:
+            return False
 
     def add_row(self, label_text, widget=None):
         row_layout = QHBoxLayout()
@@ -90,38 +103,6 @@ class App(QWidget):
         row_layout.addWidget(widget)
         self.layout.addLayout(row_layout)
         return widget
-
-    def getSource(self):
-        items = ("ETH", "BTC")
-        i, okPressed = self.source.getText(self, "Source", "Source currency:", items, 0, False)
-        if okPressed:
-            print(i)
-
-    def getTarget(self):
-        items = ("ETH", "BTC")
-        i, okPressed = QInputDialog.getItem(self, "Source", "Source currency:", items, 0, False)
-        if okPressed:
-            print(i)
-
-    def getTargetAmount(self):
-        target_amount, okPressed = QInputDialog.getDouble(self, "Target Amount", "Target Amount", 10, 0, 1000, 10)
-        if okPressed:
-            print(target_amount)
-
-    def getSourceAmount(self):
-        target_amount, okPressed = QInputDialog.getDouble(self, "Target Amount", "Target Amount", 10, 0, 1000, 10)
-        if okPressed:
-            print(target_amount)
-
-    def token_combo_box(self):
-        box = QComboBox()
-        box.addItems(self.tokens)
-        return box
-
-    def getSignature(self):
-        text, okPressed = QInputDialog.getText(self, "User signature", "Signature:", QLineEdit.Normal, "")
-        if okPressed and text != '':
-            print(text)
 
     @staticmethod
     def _endpoint(route):
