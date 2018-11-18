@@ -37,17 +37,18 @@ def load_erc20_abi():
 
 
 class App(QWidget):
-    def __init__(self):
+    def __init__(self, account_number):
         super().__init__()
         self.title = 'Ordex Decentralized Exchange'
         self.layout = QVBoxLayout()
         self.tokens = get_tokens()
         self.w3 = web3.Web3(web3.HTTPProvider(W3_ENDPOINT))
-        self.account = self.w3.personal.listAccounts[0]
         self.initUI()
         self.ordex_address = os.environ.get("ORDEX_ADDRESS", "0x97a0D266F6DE4669698De2a07714552AEc643717")
         self.erc20_abi = load_erc20_abi()
-        self.w3.eth.defaultAccount = self.w3.eth.accounts[0]
+
+        self.account = self.w3.personal.listAccounts[account_number]
+        self.w3.eth.defaultAccount = self.account
 
     def initUI(self):
         self.setWindowTitle(self.title)
@@ -124,8 +125,12 @@ class App(QWidget):
 
 
 if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--account-number", default=0, type=int)
+    args = parser.parse_args()
     app = QApplication(sys.argv)
-    ex = App()
+    ex = App(args.account_number)
     sys.exit(app.exec_())
 
 
