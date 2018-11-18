@@ -127,21 +127,20 @@ class OrderProcessor {
   }
 
     updateDbOrderBook(transaction) {
-      console.log(transaction);
       const sellOffer = this.db.offers.get(transaction.offers[0])[0]
       const buyOffer = this.db.offers.get(transaction.offers[1])[0]
       sellOffer.sourceAmount -= transaction.targetAmount
       buyOffer.targetAmount -= transaction.sourceAmount
       const promises = [];
-      if (buyOffer.sourceAmount === 0) {
-        promises.push(this.db.offers.del(buyOffer))
-      } else {
+      if (buyOffer.targetAmount) {
         promises.push(this.db.offers.put(buyOffer))
-      }
-      if (sellOffer.targetAmount === 0) {
-        promises.push(this.db.offers.del(sellOffer))
       } else {
+        promises.push(this.db.offers.del(buyOffer._id))
+      }
+      if (sellOffer.sourceAmount) {
         promises.push(this.db.offers.put(sellOffer))
+      } else {
+        promises.push(this.db.offers.del(sellOffer._id))
       }
       return Promise.all(promises);
     }
