@@ -13,7 +13,7 @@ function getRandomInt(max) {
   return Math.floor(Math.random() * Math.floor(max));
 }
 
-const ORDEX_CONTRACT_ADDRESS = '0xE8076F73F08A2b85589260Af1747702eE6274d53';
+const ORDEX_CONTRACT_ADDRESS = '0x767f978343ca33d774fc82bd0a4ed8234248a75d';
 
 
 class OrderProcessor {

@@ -8,8 +8,8 @@ const Web3 = require('web3');
 
 
 Promise.all([
-  createDB('offers1'),
-  createDB('transactions1'),
+  createDB('offers2'),
+  createDB('transactions2'),
 ]).then((dbArray) => {
   const db = {offers: dbArray[0], transactions: dbArray[1]};
   const w3 = new Web3(new Web3.providers.HttpProvider(config.w3Endpoint));

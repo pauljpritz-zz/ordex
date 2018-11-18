@@ -8,6 +8,7 @@ contract('1st OrDex test', async (accounts) => {
   // give account[0] some CatTokens
   it("should put 10 CatToken in the first account", async () => {
      let instance = await ERC20.deployed();
+     console.log(`Ordex address: ${instance.address}`);
      let balance = await instance.balanceOf.call(accounts[0]);
      assert.equal(balance.valueOf(), 10);
   })
@@ -15,6 +16,7 @@ contract('1st OrDex test', async (accounts) => {
   // give account[1] some CatTokens from account[0]
   it("should transfer 10 CatToken in the second account", async () => {
      let instance = await ERC20.deployed();
+     console.log(instance.address);
      let balance = await instance.transfer(accounts[1], 10);
      let balance_1 = await instance.balanceOf.call(accounts[0]);
      assert.equal(balance_1.valueOf(), 0);
@@ -23,6 +25,7 @@ contract('1st OrDex test', async (accounts) => {
   //give account[0] some DogTokens
   it("should put 20 DogToken in the first account", async () => {
      let instance = await ERC20_2.deployed();
+     console.log(instance.address);
      let balance = await instance.balanceOf.call(accounts[0]);
      assert.equal(balance.valueOf(), 20);
   })
