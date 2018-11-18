@@ -103,7 +103,10 @@ class OrderProcessor {
     };
 
     if (transaction.signatures[0] && transaction.signatures[1]) {
-      return this.executeTransaction(transaction).then(() => {
+        return this.executeTransaction(transaction).then(() => {
+            return this.updateDbOrderBook(transaction);
+        })
+      .then(() => {
         return this.db.transactions.del(input.transactionID);
       })
       .then(() => {
@@ -113,6 +116,28 @@ class OrderProcessor {
     }
     return this.db.transactions.put(transaction);
   }
+
+    updateDbOrderBook(transaction) {
+        sell_offer = self.db.offers.get(transaction.target_id)
+        buy_offer = self.db.offers.get(transaction.source_id)
+        sell_offer.sourceAmount -= transaction.targetAmount
+        buy_offer.targetAmount -= transaction.sourceAmount
+        var promises = []
+        if (buy_offer.sourceAmount != 0) {
+            promises.push(self.db.offers.put(buy_offer))
+        }
+        else if (buy_offer.sourceAmount == 0) {
+            promises.push(self.db.offers.del(buy_offer))
+        }
+        if (sell_offer.targetAmount != 0) {
+            promises.push(self.db.offers.put(sell_offer))
+        }
+        else if (sell_offer == 0) {
+            promises.push(self.db.offers.del(sell_offer))
+        }
+        return Promise.all(promises);
+
+    }
 
   executeTransaction(transaction) {
     // TODO: call Sam code's

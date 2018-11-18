@@ -1,7 +1,9 @@
 class Transaction {
-  constructor(buyer, seller, source, target,
+  constructor(source_id, target_id, buyer, seller, source, target,
               sourceAmount, targetAmount,
               sourceExpiry, targetExpiry) {
+    this.source_id = source_id;
+    this.target_id = target_id;  
     this.buyer = buyer;
     this.seller = seller;
     this.sourceAmount = sourceAmount;
