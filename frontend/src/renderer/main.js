@@ -25,7 +25,7 @@ import 'vue-material/dist/theme/default.css';
 import 'element-ui/lib/theme-chalk/index.css';
 
 
-import './event-handler';
+import './order-handler';
 import App from './App';
 import router from './router';
 import setupWs from './ws';

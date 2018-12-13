@@ -14,6 +14,10 @@ export function postOrder(order) {
   return http.post('/offer', order);
 }
 
+export function getRemoteConfig() {
+  return http.get('/config').then(resp => resp.data);
+}
+
 export function sendSignature(message) {
   return http.post('/signature', message);
 }

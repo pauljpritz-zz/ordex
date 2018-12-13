@@ -21,9 +21,9 @@
                     <md-option></md-option>
                     <md-option
                       v-for="token in tokens"
-                      v-if="token.name !== form.targetToken"
-                      :key="token.name"
-                      v-bind:value="token.name">{{ token.name }}</md-option>
+                      v-if="token.address !== form.targetToken"
+                      :key="token.address"
+                      v-bind:value="token.address">{{ token.name }}</md-option>
                   </md-select>
                   <span class="md-error" v-if="!$v.form.sourceToken.required">The source token required</span>
                 </md-field>
@@ -47,9 +47,9 @@
                     <md-option></md-option>
                     <md-option
                       v-for="token in tokens"
-                      v-if="token.name !== form.sourceToken"
-                      :key="token.name"
-                      v-bind:value="token.name">{{ token.name }}</md-option>
+                      v-if="token.address !== form.sourceToken"
+                      :key="token.address"
+                      v-bind:value="token.address">{{ token.name }}</md-option>
                   </md-select>
                   <span class="md-error" v-if="!$v.form.targetToken.required">The target token required</span>
                 </md-field>
@@ -109,7 +109,8 @@ import {
   minValue,
 } from 'vuelidate/lib/validators';
 
-import { postOrder, getTokens } from '../http';
+import { getTokens } from '../http';
+import { sendOrder } from '../order-handler';
 import store from '../store';
 import router from '../router';
 
@@ -189,7 +190,7 @@ export default {
 
         this.sending = true;
 
-        postOrder(payload).then(() => {
+        sendOrder(payload).then(() => {
           router.replace({ path: '/', query: { success: 'order' } });
         }).catch(() => {
           this.sending = false;

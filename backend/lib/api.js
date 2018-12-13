@@ -6,6 +6,7 @@ const app = express();
 const tokens = require('./tokens.json');
 const OrderProcessor = require('./order-processor')
 const Offer = require('./offer');
+const config = require('./config');
 
 app.use(express.json());
 app.use(cors());
@@ -48,6 +49,12 @@ module.exports = function (db, w3) {
 
   app.get('/tokens', (req, res) => {
     res.json(tokens);
+  });
+
+  app.get('/config', (req, res) => {
+    res.json({
+      ordexAddress: config.ordexAddress,
+    });
   });
 
   app.get('/offers', (req, res) => {

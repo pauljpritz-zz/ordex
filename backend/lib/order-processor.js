@@ -1,20 +1,21 @@
 const _ = require('lodash');
+
 const Web3 = require('web3');
 const uuid = require('uuid/v4');
 const Validator = require('jsonschema').Validator;
+
 const schemas = require('./schemas');
 const OrderEngine = require('./order-engine');
+const ordex = require('./OrDex.json');
+const config = require('./config');
+const tokensInfo = require('./tokens.json');
 
 const validator = new Validator();
-const ordex = require('./OrDex.json');
-const tokensInfo = require('./tokens.json');
 
 
 function getRandomInt(max) {
   return Math.floor(Math.random() * Math.floor(max));
 }
-
-const ORDEX_CONTRACT_ADDRESS = '0x0d00176690e52949c54f3785d02fe84a89c6e19c';
 
 
 class OrderProcessor {
@@ -163,12 +164,12 @@ class OrderProcessor {
 
   executeTransaction(transaction) {
     const abi = ordex["abi"];
-    const contract = new this.w3.eth.Contract(abi, ORDEX_CONTRACT_ADDRESS);
+    const contract = new this.w3.eth.Contract(abi, config.ordexAddress);
     console.log('executing contract', transaction);
-    const tokens = _.map(transaction.tokens, (v) => this.tokenMappings[v].address);
-    console.log('calling contract with',
+    console.log(
+      'calling contract with',
       transaction.addresses,
-      tokens,
+      transaction.tokens,
       transaction.amounts,
       transaction.nonces,
       transaction.expiries
@@ -176,11 +177,11 @@ class OrderProcessor {
     return this.w3.eth.getAccounts().then((v) => {
       return contract.methods.swap(
         transaction.addresses,
-        tokens,
+        transaction.tokens,
         transaction.amounts,
         transaction.nonces,
         transaction.expiries
-      ).send({from: v[0]});
+      ).send({from: v[0], gas: 1000000});
     });
   }
 

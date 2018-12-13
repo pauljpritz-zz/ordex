@@ -1,4 +1,6 @@
 module.exports = {
   w3Endpoint: 'http://localhost:7545',
-  port: 3000
+  port: 3000,
+  ordexAddress: '0x39edc11d49382f8caaa8c193d203b1edd9ee178e',
+  dbSuffix: '1s4kbCYo',
 };
