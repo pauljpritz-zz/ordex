@@ -12,7 +12,7 @@ args = parser.parse_args()
 
 w3 = web3.Web3(web3.HTTPProvider(args.endpoint))
 
-with open("../frontend/erc20.json") as f:
+with open("../frontend/static/erc20.json") as f:
     abi = json.load(f)
 
 contract = w3.eth.contract(abi=abi, address=w3.toChecksumAddress(args.address))
