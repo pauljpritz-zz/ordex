@@ -1,11 +1,14 @@
 const express = require('express');
+const cors = require('cors')
 const app = express();
+
 
 const tokens = require('./tokens.json');
 const OrderProcessor = require('./order-processor')
 const Offer = require('./offer');
 
 app.use(express.json());
+app.use(cors());
 require('express-ws')(app);
 
 
@@ -25,7 +28,11 @@ module.exports = function (db, w3) {
       res.status(400);
       res.json({error: err});
     })
-    .then((offer) => orderProcessor.searchForAvailableTransactions(offer));
+    .then((offer) => {
+      if (offer) {
+        orderProcessor.searchForAvailableTransactions(offer);
+      }
+    });
   });
 
   app.post('/signature', (req, res) => {
@@ -35,7 +42,7 @@ module.exports = function (db, w3) {
       return promise;
     } catch (err) {
       res.status(400);
-      res.json({error: err});
+      res.json({error: err.message});
     }
   });
 

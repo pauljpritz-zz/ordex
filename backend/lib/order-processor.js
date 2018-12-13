@@ -7,13 +7,14 @@ const OrderEngine = require('./order-engine');
 
 const validator = new Validator();
 const ordex = require('./OrDex.json');
+const tokensInfo = require('./tokens.json');
 
 
 function getRandomInt(max) {
   return Math.floor(Math.random() * Math.floor(max));
 }
 
-const ORDEX_CONTRACT_ADDRESS = '0x767f978343ca33d774fc82bd0a4ed8234248a75d';
+const ORDEX_CONTRACT_ADDRESS = '0x0d00176690e52949c54f3785d02fe84a89c6e19c';
 
 
 class OrderProcessor {
@@ -21,17 +22,16 @@ class OrderProcessor {
     this.clients = {};
     this.db = db;
     this.w3 = w3;
-    this.messageQueue = {};
+    this.tokenMappings = _.mapValues(_.groupBy(tokensInfo, 'name'), _.first);
   }
 
   handleConnection(ws, req) {
     ws.on('message', (msg) => {
       const parsedMessage = JSON.parse(msg);
-      switch (parsedMessage.action) {
-      case 'register':
-        this.register(ws, parsedMessage.args);
-        break;
-      default:
+      const func = this[parsedMessage.action];
+      if (func) {
+        Reflect.apply(func, this, [ws, parsedMessage.args]);
+      } else {
         console.error(`message not understood: ${msg}`);
       }
     });
@@ -52,7 +52,22 @@ class OrderProcessor {
     }
     console.log(`registered address ${args.address}`);
     this.clients[args.address] = ws;
+    const messages = this.db.messages.get(args.address) || [];
+    while (messages.length > 0) {
+      const message = messages.pop();
+      this.sendMessage(message, args.address);
+    }
+    this.db.messages.put(args.address, []);
   }
+
+  unregister(ws, args) {
+      if (!args.address) {
+        console.error('missing address');
+        return;
+      }
+      console.log(`unregistered address ${args.address}`);
+      Reflect.deleteProperty(this.clients, args.address);
+    }
 
   publishOffer(offer) {
     const id = uuid();
@@ -66,6 +81,7 @@ class OrderProcessor {
     const engine = new OrderEngine(lastOffer.sourceToken, lastOffer.targetToken, offers);
     const transactions = engine.matchTransaction();
     for (const transaction of transactions) {
+      console.log(transaction);
       this.multicastTransaction(transaction);
     }
   }
@@ -85,9 +101,9 @@ class OrderProcessor {
     if (result.errors && result.errors.length > 0) {
       throw new Error(`invalid JSON: ${JSON.stringify(result.errors)}`);
     }
-    let transaction = this.db.transactions.get(input.transactionID);
+    let transaction = this.db.transactions.get(input.id);
     if (!transaction) {
-      throw new Error(`transaction ${input.transactionID} does not exist`);
+      throw new Error(`transaction ${input.id} does not exist`);
     }
     transaction = transaction[0];
 
@@ -113,7 +129,7 @@ class OrderProcessor {
             return this.updateDbOrderBook(transaction);
         })
       .then(() => {
-        return this.db.transactions.del(input.transactionID);
+        return this.db.transactions.del(input.id);
       })
       .then(() => {
         notifyClient(0);
@@ -148,16 +164,24 @@ class OrderProcessor {
   executeTransaction(transaction) {
     const abi = ordex["abi"];
     const contract = new this.w3.eth.Contract(abi, ORDEX_CONTRACT_ADDRESS);
-    console.log('executing contract');
-    const ret = contract.methods.swap(
+    console.log('executing contract', transaction);
+    const tokens = _.map(transaction.tokens, (v) => this.tokenMappings[v].address);
+    console.log('calling contract with',
       transaction.addresses,
-      transaction.tokens,
+      tokens,
       transaction.amounts,
       transaction.nonces,
       transaction.expiries
     );
-    console.log(ret);
-    return Promise.resolve(transaction);
+    return this.w3.eth.getAccounts().then((v) => {
+      return contract.methods.swap(
+        transaction.addresses,
+        tokens,
+        transaction.amounts,
+        transaction.nonces,
+        transaction.expiries
+      ).send({from: v[0]});
+    });
   }
 
   sendMessage(message, address) {
@@ -165,10 +189,9 @@ class OrderProcessor {
     if (client) {
       return client.send(JSON.stringify(message));
     }
-    if (!this.messageQueue[address]) {
-      this.messageQueue[address] = [];
-    }
-    this.messageQueue[address].push(message);
+    const messages = this.db.messages.get(address) || [];
+    messages.push(message);
+    this.db.messages.put(address, messages);
   }
 
 

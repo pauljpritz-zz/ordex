@@ -23,7 +23,7 @@
     "id": "/Signature",
     "type": "object",
     "properties": {
-      "transactionID": {"type": "string"},
+      "id": {"type": "string"},
       "address": {"type": "string"},
       "signature": {"type": "string"}
     }

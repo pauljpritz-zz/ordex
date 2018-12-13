@@ -4,7 +4,7 @@ const schemas = require('./schemas');
 
 const validator = new Validator();
 
-const BLOCK_OFFSET = 4 * 15;
+const BLOCK_OFFSET = 4 * 150;
 
 
 class Offer {

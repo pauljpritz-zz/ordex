@@ -7,14 +7,23 @@ const ipfsOptions = {
   }
 };
 const ipfs = new IPFS(ipfsOptions);
+let orbitdb = null;
 ipfs.on('error', (e) => console.error(e));
 
-module.exports = function (name) {
+module.exports = function (name, dbType) {
   return new Promise((res) => {
     ipfs.on('ready', async () => {
-      const orbitdb = new OrbitDB(ipfs);
+      if (!orbitdb) {
+        orbitdb = new OrbitDB(ipfs);
+      }
 
-      const db = await orbitdb.docs(`chainhack.ordex.${name}`);
+      const dbName = `chainhack.ordex.${name}`;
+      let db = null;
+      if (dbType === 'kvstore') {
+        db = await orbitdb.kvstore(dbName)
+      } else {
+        db = await orbitdb.docs(dbName);
+      }
       await db.load();
       res(db);
     });

@@ -1,6 +1,7 @@
 {
   "name": "ordex",
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^4.16.4",
     "express-ws": "^4.0.0",
     "ipfs": "^0.33.1",

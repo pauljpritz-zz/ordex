@@ -20,6 +20,7 @@ from PyQt5.QtGui import QIntValidator
 ENDPOINT = "http://localhost:3000"
 WS_ENDPOINT = "ws://localhost:3000"
 W3_ENDPOINT = "http://127.0.0.1:7545"
+ORDEX_ADDRESS = "0xc7267859ee29af192119d2241fc0ce146c434dd5"
 
 
 
@@ -71,7 +72,8 @@ class App(QWidget):
         self.tokens = get_tokens()
         self.w3 = web3.Web3(web3.HTTPProvider(W3_ENDPOINT))
         self.initUI()
-        self.ordex_address = os.environ.get("ORDEX_ADDRESS", "0x97a0D266F6DE4669698De2a07714552AEc643717")
+        self.ordex_address = os.environ.get("ORDEX_ADDRESS",
+            self.w3.toChecksumAddress(ORDEX_ADDRESS))
         self.erc20_abi = load_erc20_abi()
 
         self.account = self.w3.personal.listAccounts[account_number]
@@ -180,7 +182,9 @@ class App(QWidget):
         address = [v["address"] for v in self.tokens if v["name"] == source_token][0]
         address = self.w3.toChecksumAddress(address)
         contract = self.w3.eth.contract(abi=self.erc20_abi, address=address)
-        contract.functions.approve(self.ordex_address, source_amount).call()
+        contract.functions.approve(self.ordex_address, source_amount).call(
+            {"from": self.account}
+        )
 
     def add_row(self, label_text, widget=None):
         row_layout = QHBoxLayout()
