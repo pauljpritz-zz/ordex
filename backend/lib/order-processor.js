@@ -183,7 +183,7 @@ class OrderProcessor {
       transaction.expiries,
       r, s, v,
     );
-    return this.w3.eth.getAccounts().then((v) => {
+    return this.w3.eth.getAccounts().then((accounts) => {
       return contract.methods.swap(
         transaction.addresses,
         transaction.tokens,
@@ -191,7 +191,7 @@ class OrderProcessor {
         transaction.nonces,
         transaction.expiries,
         r, s, v
-      ).send({from: v[0], gas: 1000000});
+      ).send({from: accounts[0], gas: 1000000});
     });
   }
 
