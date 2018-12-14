@@ -10,6 +10,7 @@ globals:
   contract: true
   artifacts: true
   instance: true
+  web3: true
 rules:
   accessor-pairs: error
   array-bracket-newline: error
@@ -199,7 +200,7 @@ rules:
   object-curly-newline: error
   object-curly-spacing:
     - error
-    - never
+    - always
   object-property-newline: error
   object-shorthand: error
   one-var: 'off'
@@ -225,7 +226,7 @@ rules:
     - always
   require-atomic-updates: error
   require-await: 'off'
-  require-jsdoc: error
+  require-jsdoc: 'off'
   require-unicode-regexp: error
   rest-spread-spacing: error
   semi: 'off'

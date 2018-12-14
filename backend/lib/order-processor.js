@@ -1,6 +1,5 @@
 const _ = require('lodash');
 
-const Web3 = require('web3');
 const uuid = require('uuid/v4');
 const Validator = require('jsonschema').Validator;
 
@@ -9,6 +8,7 @@ const OrderEngine = require('./order-engine');
 const ordex = require('./OrDex.json');
 const config = require('./config');
 const tokensInfo = require('./tokens.json');
+const utils = require('./utils');
 
 const validator = new Validator();
 
@@ -93,16 +93,6 @@ class OrderProcessor {
     }
   }
 
-  formatTransaction(transaction, i) {
-    return {
-      addresses: transaction.addresses[i],
-      expiry: transaction.expiries[i],
-      tokens: [transaction.tokens[i], transaction.tokens[1 - i]],
-      nonce: transaction.nonces[i],
-      amounts: [transaction.amounts[i], transaction.amounts[1 - i]],
-    };
-  }
-
   async receiveSignature(input, retry = 3) {
     if (retry <= 0) {
       throw new Error('max retries exceeded, aborting');
@@ -134,7 +124,7 @@ class OrderProcessor {
     const notifyClient = (i) => {
       const message = {
         action: 'transactionDone',
-        args: this.formatTransaction(transaction, i)
+        args: utils.formatTransaction(transaction, i)
       }
       this.sendMessage(message, transaction.addresses[i]);
     };
@@ -182,13 +172,16 @@ class OrderProcessor {
   executeTransaction(transaction) {
     const abi = ordex["abi"];
     const contract = new this.w3.eth.Contract(abi, config.ordexAddress);
+    const [r, s, v] = utils.splitSignatures(transaction.signatures);
+
     console.log(
       'calling contract with',
       transaction.addresses,
       transaction.tokens,
       transaction.amounts,
       transaction.nonces,
-      transaction.expiries
+      transaction.expiries,
+      r, s, v,
     );
     return this.w3.eth.getAccounts().then((v) => {
       return contract.methods.swap(
@@ -196,7 +189,8 @@ class OrderProcessor {
         transaction.tokens,
         transaction.amounts,
         transaction.nonces,
-        transaction.expiries
+        transaction.expiries,
+        r, s, v
       ).send({from: v[0], gas: 1000000});
     });
   }
@@ -240,21 +234,9 @@ class OrderProcessor {
       signatures: [null, null]
     };
 
-    const makeStringToSign = (transactionObject) => {
-      return Web3.utils.soliditySha3(
-        {type: 'string', value: 'OrDex'},
-        {type: 'uint256', value: transactionObject.nonce},
-        {type: 'uint256', value: transactionObject.expiry},
-        {type: 'string', value: transactionObject.tokens[0]},
-        {type: 'string', value: transactionObject.tokens[1]},
-        {type: 'uint256', value: transactionObject.amounts[0]},
-        {type: 'uint256', value: transactionObject.amounts[1]},
-      );
-    };
-
     const makeMessage = (i) => {
-      const transactionObject = this.formatTransaction(toPersist, i);
-      const stringToSign = makeStringToSign(transactionObject);
+      const transactionObject = utils.formatTransaction(toPersist, i);
+      const stringToSign = utils.makeStringToSign(transactionObject);
       return {
         id: toPersist._id,
         transaction: transaction,
