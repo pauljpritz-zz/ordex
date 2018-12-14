@@ -1,5 +1,8 @@
 {
   "name": "ordex",
+  "scripts": {
+    "dev": "nodemon bin/ordex.js"
+  },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.16.4",
@@ -10,5 +13,8 @@
     "orbit-db": "^0.19.9",
     "uuid": "^3.3.2",
     "web3": "^1.0.0-beta.36"
+  },
+  "devDependencies": {
+    "nodemon": "^1.18.8"
   }
 }

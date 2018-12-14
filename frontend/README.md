@@ -1,6 +1,10 @@
-# ordex-frontend
+# OrDex Desktop client
 
-> Ordex Desktop client
+The desktop client of OrDex is developed using [Electron][electron] and [VueJS][vuejs].
+
+Below is a screenshot of the order page.
+
+![screenshot](../misc/ordex-screenshot.png)
 
 #### Build Setup
 
@@ -17,12 +21,14 @@ npm run build
 # run unit & end-to-end tests
 npm test
 
-
 # lint all JS/Vue component files in `src/`
 npm run lint
-
 ```
 
 ---
 
-This project was generated with [electron-vue](https://github.com/SimulatedGREG/electron-vue)@[8fae476](https://github.com/SimulatedGREG/electron-vue/tree/8fae4763e9d225d3691b627e83b9e09b56f6c935) using [vue-cli](https://github.com/vuejs/vue-cli). Documentation about the original structure can be found [here](https://simulatedgreg.gitbooks.io/electron-vue/content/index.html).
+The project was generated with [electron-vue](https://github.com/SimulatedGREG/electron-vue), see its documentation
+for more information.
+
+[electron]: https://electronjs.org/
+[vuejs]: https://vuejs.org/

@@ -16,7 +16,7 @@
    networks: {
      development: {
        host: "127.0.0.1",
-       port: 7545,
+       port: parseInt(process.env.ETH_NETWORK_PORT || "7545", 10),
        network_id: "*" // Match any network id
      }
    }
