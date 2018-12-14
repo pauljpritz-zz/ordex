@@ -17,6 +17,12 @@ function getRandomInt(max) {
   return Math.floor(Math.random() * Math.floor(max));
 }
 
+function delay(ms) {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve(), ms);
+  });
+}
+
 
 class OrderProcessor {
   constructor(w3, db) {
@@ -97,15 +103,24 @@ class OrderProcessor {
     };
   }
 
-  receiveSignature(input) {
+  async receiveSignature(input, retry = 3) {
+    if (retry <= 0) {
+      throw new Error('max retries exceeded, aborting');
+    }
     const result = validator.validate(input, schemas.signature);
+    console.log('processing signature', input);
     if (result.errors && result.errors.length > 0) {
       throw new Error(`invalid JSON: ${JSON.stringify(result.errors)}`);
     }
     let transaction = this.db.transactions.get(input.id);
-    if (!transaction) {
-      throw new Error(`transaction ${input.id} does not exist`);
+    if (!transaction || transaction.length === 0) {
+      console.error(`transaction ${input.id} does not exist`);
+      await delay(300);
+      return this.receiveSignature(input, retry - 1);
     }
+    const lockKey = `transaction-${input.id}`;
+    const lockValue = uuid();
+    await this.db.locks.put(lockKey, lockValue);
     transaction = transaction[0];
 
     if (transaction.addresses[0] === input.address) {
@@ -125,21 +140,23 @@ class OrderProcessor {
     };
 
     if (transaction.signatures[0] && transaction.signatures[1]) {
-        return this.executeTransaction(transaction).then(() => {
-          console.log('transaction executed on THE BLOCKCHAIN');
-            return this.updateDbOrderBook(transaction);
-        })
-      .then(() => {
-        return this.db.transactions.del(input.id);
-      })
-      .then(() => {
-        notifyClient(0);
-        notifyClient(1);
-      })
-      .catch((err) => {
-        console.log(err);
-      });
+      await this.executeTransaction(transaction);
+      console.log('transaction executed on THE BLOCKCHAIN');
+      await this.updateDbOrderBook(transaction);
+      await this.db.transactions.del(input.id);
+      notifyClient(0);
+      notifyClient(1);
+      return;
     }
+
+    // naive optimistic lock
+    await this.db.locks.load();
+    if (this.db.locks.get(lockKey) !== lockValue) {
+      console.error('lock value did not match, retrying');
+      await delay(300);
+      return this.receiveSignature(input, retry - 1);
+    }
+
     return this.db.transactions.put(transaction);
   }
 
@@ -165,7 +182,6 @@ class OrderProcessor {
   executeTransaction(transaction) {
     const abi = ordex["abi"];
     const contract = new this.w3.eth.Contract(abi, config.ordexAddress);
-    console.log('executing contract', transaction);
     console.log(
       'calling contract with',
       transaction.addresses,

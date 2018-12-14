@@ -1,6 +1,7 @@
 import config from './config';
 import events from './events';
 import { signMessage } from './w3';
+import { confirmTransaction } from './order-handler';
 
 
 export default function setupWS() {
@@ -42,7 +43,7 @@ export default function setupWS() {
           });
           break;
         case 'transactionDone':
-          console.log(parsed.args);
+          confirmTransaction(parsed.args);
           break;
         default:
           events.emit('error', { message: `unkown message received ${parsed.action}` });

@@ -46,9 +46,15 @@
       </div>
     </main>
     <md-snackbar
-      :md-active.sync="showSnackbar && $route.query.success === 'order'">
+      :md-active.sync="showOrderPlaced && $route.query.success === 'order'">
       <span>Your order has been placed</span>
-      <md-button class="md-primary" @click="showSnackbar = false">Close</md-button>
+      <md-button class="md-primary" @click="showOrderPlaced = false">Close</md-button>
+    </md-snackbar>
+
+    <md-snackbar
+      :md-active.sync="showConfirmedTransaction">
+      <span>{{ confirmedTransaction.message }}</span>
+      <md-button class="md-primary" @click="showConfirmedTransaction = false">Close</md-button>
     </md-snackbar>
 
     <md-snackbar
@@ -71,6 +77,12 @@
       events.on('connected', () => {
         this.showConnected = true;
       });
+      events.on('transaction-confirmed', (transaction) => {
+        this.confirmedTransaction = transaction;
+        this.showOrderPlaced = false;
+        this.showConfirmedTransaction = true;
+        this.fetchBalances();
+      });
     },
     mounted() {
       this.fetchBalances();
@@ -79,8 +91,10 @@
       return {
         balances: [],
         loading: true,
-        showSnackbar: true,
+        showOrderPlaced: true,
         showConnected: false,
+        showConfirmedTransaction: false,
+        confirmedTransaction: {},
       };
     },
     components: { Tokens },

@@ -3,6 +3,10 @@ import store from './store';
 import { sendSignature, postOrder, getTokens } from './http';
 import { approveTransfer, getERC20Balance } from './w3';
 
+events.on('error', (err) => {
+  console.error(err);
+});
+
 events.on('message-signed', (transaction) => {
   const message = (({ id, address, signature }) => ({ id, address, signature }))(transaction);
   sendSignature(message).catch((err) => {
@@ -13,6 +17,15 @@ events.on('message-signed', (transaction) => {
 export async function sendOrder(order) {
   await approveTransfer(store.account, order.sourceToken, order.sourceAmount);
   return postOrder(order);
+}
+
+export async function confirmTransaction(transaction) {
+  const allTokens = await getTokens();
+  const findToken = address => allTokens.find(token => token.address === address);
+  const tokens = transaction.tokens.map(findToken);
+  const message = `You have exchanged ${transaction.amounts[0]} ${tokens[0].name} for ` +
+                   `${transaction.amounts[1]} ${tokens[1].name}`;
+  events.emit('transaction-confirmed', Object.assign({ message }, transaction));
 }
 
 export async function getBalances() {

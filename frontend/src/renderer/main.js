@@ -15,9 +15,9 @@ import {
   MdSnackbar,
 } from 'vue-material/dist/components';
 
-import { TimePicker } from 'element-ui';
 import lang from 'element-ui/lib/locale/lang/en';
 import locale from 'element-ui/lib/locale';
+import { TimePicker } from 'element-ui';
 
 import PulseLoader from 'vue-spinner/src/PulseLoader.vue';
 import 'vue-material/dist/vue-material.min.css';

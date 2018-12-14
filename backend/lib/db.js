@@ -10,7 +10,7 @@ const ipfs = new IPFS(ipfsOptions);
 let orbitdb = null;
 ipfs.on('error', (e) => console.error(e));
 
-module.exports = function (name, dbType) {
+exports.createDB = function (name, dbType) {
   return new Promise((res) => {
     ipfs.on('ready', async () => {
       if (!orbitdb) {
@@ -27,5 +27,21 @@ module.exports = function (name, dbType) {
       await db.load();
       res(db);
     });
+  });
+};
+
+exports.createAllDBs = function (suffix) {
+  return Promise.all([
+    exports.createDB(`offers-${suffix}`),
+    exports.createDB(`transactions-${suffix}`),
+    exports.createDB(`message-${suffix}`, 'kvstore'),
+    exports.createDB(`locks-${suffix}`, 'kvstore'),
+  ]).then((dbArray) => {
+    return {
+      offers: dbArray[0],
+      transactions: dbArray[1],
+      messages: dbArray[2],
+      locks: dbArray[3],
+    };
   });
 };
