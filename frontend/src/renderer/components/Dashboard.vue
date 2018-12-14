@@ -21,16 +21,18 @@
 
       <div class="right-side">
         <div>
-          <div class="title">Your Tokens</div>
+          <div class="title">
+            Your Tokens
+          </div>
           <div class="content" v-if="!loading && balances.length > 0">
             <md-table>
               <md-table-row>
                 <md-table-head>Token</md-table-head>
                 <md-table-head>Balance</md-table-head>
               </md-table-row>
-              <md-table-row v-for="balance in balances" :key="balance[0]">
-                <md-table-cell>{{ balance[0] }}</md-table-cell>
-                <md-table-cell>{{ balance[1] }}</md-table-cell>
+              <md-table-row v-for="tokenBalance in balances" :key="tokenBalance.address">
+                <md-table-cell>{{ tokenBalance.name }}</md-table-cell>
+                <md-table-cell>{{ tokenBalance.balance }}</md-table-cell>
               </md-table-row>
             </md-table>
             <router-link class="button" to="/exchange-tokens">Exchange tokens</router-link>
@@ -59,8 +61,7 @@
 
 <script>
   import Tokens from './Tokens';
-  import { getERC20Balance } from '../w3';
-  import { getTokens } from '../http';
+  import { getBalances } from '../order-handler';
   import store from '../store';
   import events from '../events';
 
@@ -89,15 +90,10 @@
         this.$router.replace({ path: '/select-account' });
       },
       fetchBalances() {
-        getTokens()
-          .then((tokens) => {
-            const promises = tokens.map(token => getERC20Balance(token.address, store.account));
-            return Promise.all(promises).then((rawBalances) => {
-              const balances = rawBalances.map(b => parseInt(b, 10)).filter(b => b > 0);
-              this.balances = balances.map((balance, i) => [tokens[i].name, balance]);
-              this.loading = false;
-            });
-          });
+        getBalances().then((balances) => {
+          this.balances = balances;
+          this.loading = false;
+        });
       },
     },
   };

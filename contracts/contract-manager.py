@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import argparse
 import json
 
@@ -12,6 +14,9 @@ class W3Manager:
         with open("../frontend/static/erc20.json") as f:
             self.erc20_abi = json.load(f)
 
+        with open("../backend/lib/config.json") as f:
+            self.config = json.load(f)
+
     def show_balance(self, token_address, account_address):
         account_address = self._get_address(account_address)
         token_address = self._get_address(token_address)
@@ -24,6 +29,15 @@ class W3Manager:
         to_address = self._get_address(to_address)
         contract = self.get_erc20_contract(token_address)
         contract.functions.transfer(to_address, amount).transact({"from": from_address})
+
+    def show_allowance(self, token_address, account_address, spender_address=None):
+        if spender_address is None:
+            spender_address = self.config["ordexAddress"]
+        account_address = self._get_address(account_address)
+        token_address = self._get_address(token_address)
+        spender_address = self._get_address(spender_address)
+        contract = self.get_erc20_contract(token_address)
+        print(contract.functions.allowance(account_address, spender_address).call())
 
     def get_erc20_contract(self, address):
         return self.w3.eth.contract(abi=self.erc20_abi, address=address)
@@ -39,7 +53,7 @@ def main():
     parser.add_argument("--endpoint", default=W3_ENDPOINT)
     subparsers = parser.add_subparsers(dest="command")
 
-    show_balance_parser = subparsers.add_parser("show-balance")
+    show_balance_parser = subparsers.add_parser("balance")
     show_balance_parser.add_argument("token-address")
     show_balance_parser.add_argument("-a", "--account", default="0")
 
@@ -49,15 +63,24 @@ def main():
     transfer_parser.add_argument("-f", "--from", default="0")
     transfer_parser.add_argument("-t", "--to", default="1")
 
+    allowance_parser = subparsers.add_parser("allowance")
+    allowance_parser.add_argument("token-address")
+    allowance_parser.add_argument("--spender")
+    allowance_parser.add_argument("-a", "--account", default="0")
+
     args = vars(parser.parse_args())
 
     w3 = web3.Web3(web3.HTTPProvider(args["endpoint"]))
     manager = W3Manager(w3)
 
-    if args["command"] == "show-balance":
+    if args["command"] == "balance":
         manager.show_balance(args["token-address"], args["account"])
     elif args["command"] == "transfer":
         manager.transfer_tokens(args["token-address"], args["from"], args["to"], args["amount"])
+    elif args["command"] == "allowance":
+        manager.show_allowance(args["token-address"], args["account"], args["spender"])
+    else:
+        print("no command passed")
 
 
 if __name__ == "__main__":

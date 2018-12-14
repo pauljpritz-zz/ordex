@@ -20,7 +20,7 @@
                   <md-select name="source-token" id="source-token" v-model="form.sourceToken" md-dense :disabled="sending">
                     <md-option></md-option>
                     <md-option
-                      v-for="token in tokens"
+                      v-for="token in balances"
                       v-if="token.address !== form.targetToken"
                       :key="token.address"
                       v-bind:value="token.address">{{ token.name }}</md-option>
@@ -110,18 +110,17 @@ import {
 } from 'vuelidate/lib/validators';
 
 import { getTokens } from '../http';
-import { sendOrder } from '../order-handler';
+import { sendOrder, getBalances } from '../order-handler';
 import store from '../store';
 import router from '../router';
 
 export default {
   name: 'ExchangeTokens',
   mixins: [validationMixin],
-  mounted() {
-    getTokens().then((tokens) => {
-      this.tokens = tokens;
-      this.loading = false;
-    });
+  async mounted() {
+    this.tokens = await getTokens();
+    this.balances = await getBalances();
+    this.loading = false;
   },
   data() {
     return {
