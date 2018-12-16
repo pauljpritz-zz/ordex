@@ -16,34 +16,24 @@ function exchangeRateBid(a) {
 
 function compareTime(a, b) {
   return Math.sign(b.timestamp - a.timestamp);
-  // const timeA = a.timestamp;
-  // const timeB = b.timestamp;
-
-  // let comparison = 0;
-  // if (timeB > timeA) {
-  //   comparison = 1;
-  // } else if (timeB < timeA) {
-  //   comparison = -1;
-  // }
-  // return comparison;
 }
 
 function compareExchangeRateAndTime(a, b) {
-  const ex_r_a = a.sourceAmount / a.targetAmount;
-  const ex_r_b = b.sourceAmount / b.targetAmount;
+  const exchangeRateA = a.sourceAmount / a.targetAmount;
+  const exchangeRateB = b.sourceAmount / b.targetAmount;
 
   let comparison = 0;
-  if (ex_r_b > ex_r_a) {
+  if (exchangeRateB > exchangeRateA) {
     comparison = 1;
-  } else if (ex_r_b < ex_r_a) {
+  } else if (exchangeRateB < exchangeRateA) {
     comparison = -1;
-  } else if (ex_r_b == ex_r_a) {
+  } else if (exchangeRateB == exchangeRateA) {
     comparison = compareTime(a, b);
   }
   return comparison;
 }
 
-class OrderHeap {
+class OrderMatchingEngine {
   constructor(targetToken, sourceToken, db, getBlockNumber, compareFunc) {
     this.compareFunc = compareFunc;
     if (!this.compareFunc) {
@@ -55,11 +45,10 @@ class OrderHeap {
     this.getBlockNumber = getBlockNumber;
     this.bids = [];
     this.asks = [];
+    this.heapifyOrders();
   }
 
   heapifyOrders() {
-    console.log(this.sourceToken);
-    console.log(this.allOrders[1].sourceToken);
     for (let i = 0; i < this.allOrders.length; i++) {
       if (this.allOrders[i].sourceToken === this.sourceToken &&
         this.allOrders[i].targetToken === this.targetToken) {
@@ -80,8 +69,8 @@ class OrderHeap {
 
   async matchOrders() {
     const transactions = [];
-    console.log("BidRate: ", exchangeRateBid(await this.peek(this.bids)));
-    console.log("AskRate: ", exchangeRateAsk(await this.peek(this.asks)));
+    // console.log("BidRate: ", exchangeRateBid(await this.peek(this.bids)));
+    // console.log("AskRate: ", exchangeRateAsk(await this.peek(this.asks)));
     /* eslint-disable no-await-in-loop */
     while (
       this.isExchangeRatesGreater(await this.peek(this.asks), await this.peek(this.bids))) {
@@ -127,7 +116,7 @@ class OrderHeap {
     );
   }
 
-  //All the auxiliary heap functions
+  // all the auxiliary heap functions
   size(side) {
     return side.length;
   }
@@ -195,84 +184,11 @@ class OrderHeap {
     while (
       (left(node) < this.size(side) && this._greater(side, left(node), node)) ||
       (right(node) < this.size(side) && this._greater(side, right(node), node))) {
-      let maxChild = (right(node) < this.size(side) && this._greater(side, right(node), left(node))) ? right(node) : left(node);
+      const maxChild = (right(node) < this.size(side) && this._greater(side, right(node), left(node))) ? right(node) : left(node);
       this._swap(side, node, maxChild);
       node = maxChild;
     }
   }
 }
 
-module.exports = OrderHeap;
-
-
-//TESTS
-
-const testOrder1 = {
-  address: "addr1",
-  sourceToken: "ETH",
-  targetToken: "BTC",
-  targetAmount: 100,
-  sourceAmount: 100,
-  timestamp: 10,
-  expiry: 10,
-};
-
-const testOrder2 = {
-  address: "addr2",
-  sourceToken: "BTC",
-  targetToken: "ETH",
-  targetAmount: 100,
-  sourceAmount: 100,
-  timestamp: 10,
-  expiry: 10,
-};
-
-const testOrder3 = {
-  address: "addr3",
-  sourceToken: "BTC",
-  targetToken: "ETH",
-  targetAmount: 90,
-  sourceAmount: 100,
-  timestamp: 10,
-  expiry: 10,
-};
-
-const testOrder4 = {
-  address: "addr4",
-  sourceToken: "ETH",
-  targetToken: "BTC",
-  targetAmount: 50,
-  sourceAmount: 45,
-  timestamp: 10,
-  expiry: 10,
-};
-
-const testOrder5 = {
-  address: "addr5",
-  sourceToken: "ETH",
-  targetToken: "BTC",
-  targetAmount: 75,
-  sourceAmount: 69,
-  timestamp: 10,
-  expiry: 8,
-};
-
-const testOrders = [testOrder1, testOrder2, testOrder3, testOrder4, testOrder5];
-console.log(testOrders[0])
-
-const testOrderBook = new OrderHeap("ETH", "BTC", testOrders, () => Promise.resolve(9));
-console.log("Pair: ", testOrderBook.sourceToken, testOrderBook.targetToken);
-console.log("Order book:", testOrderBook.allOrders)
-
-// test_order_book.push(test_order_book.bids, test_order5);
-
-const testSize = testOrderBook.size(testOrderBook.asks);
-console.log("Test size: ", testSize);
-
-testOrderBook.heapifyOrders();
-console.log("Asks: ", testOrderBook.asks);
-console.log("Bids: ", testOrderBook.bids);
-
-testOrderBook.matchOrders().then((testTransactions) => {
-  console.log("Transactions: ", testTransactions);
-});
+module.exports = OrderMatchingEngine;

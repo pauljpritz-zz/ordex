@@ -1,7 +1,8 @@
 {
   "name": "ordex",
   "scripts": {
-    "dev": "nodemon bin/ordex.js"
+    "dev": "nodemon bin/ordex.js",
+    "test": "mocha"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -15,6 +16,8 @@
     "web3": "^1.0.0-beta.36"
   },
   "devDependencies": {
+    "chai": "^4.2.0",
+    "mocha": "^5.2.0",
     "nodemon": "^1.18.8"
   }
 }
