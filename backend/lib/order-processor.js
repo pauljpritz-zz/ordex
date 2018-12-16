@@ -68,13 +68,13 @@ class OrderProcessor {
   }
 
   unregister(ws, args) {
-      if (!args.address) {
-        console.error('missing address');
-        return;
-      }
-      console.log(`unregistered address ${args.address}`);
-      Reflect.deleteProperty(this.clients, args.address);
+    if (!args.address) {
+      console.error('missing address');
+      return;
     }
+    console.log(`unregistered address ${args.address}`);
+    Reflect.deleteProperty(this.clients, args.address);
+  }
 
   publishOffer(offer) {
     const id = uuid();
@@ -131,7 +131,7 @@ class OrderProcessor {
 
     if (transaction.signatures[0] && transaction.signatures[1]) {
       await this.executeTransaction(transaction);
-      console.log('transaction executed on THE BLOCKCHAIN');
+      console.log('transaction executed');
       await this.updateDbOrderBook(transaction);
       await this.db.transactions.del(input.id);
       notifyClient(0);

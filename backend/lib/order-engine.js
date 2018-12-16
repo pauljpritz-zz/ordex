@@ -2,83 +2,82 @@ const Transaction = require('./transaction');
 
 
 function compare(a, b) {
-    const timeA = a.timestamp;
-    const timeB = b.timestamp;
+  const timeA = a.timestamp;
+  const timeB = b.timestamp;
 
-    let comparison = 0;
-    if (timeB > timeA) {
-        comparison = 1;
-    } else if (timeB < timeA) {
-        comparison = -1;
-    }
-    return comparison;
+  let comparison = 0;
+  if (timeB > timeA) {
+    comparison = 1;
+  } else if (timeB < timeA) {
+    comparison = -1;
+  }
+  return comparison;
 }
 
 class OrderEngine {
-    constructor(sourceToken, targetToken, db) {
-        this.sourceToken = sourceToken;
-        this.targetToken = targetToken;
-        this.allOrders = db;
-        this.bids = [];
-        this.asks = [];
-    }
+  constructor(sourceToken, targetToken, db) {
+    this.sourceToken = sourceToken;
+    this.targetToken = targetToken;
+    this.allOrders = db;
+    this.bids = [];
+    this.asks = [];
+  }
 
-    queueOrders() {
-        this.allOrders.sort(compare);
-        for (let i = 0; i < this.allOrders.length; i++) {
-            if (this.allOrders[i].sourceToken === this.sourceToken &&
-                this.allOrders[i].targetToken === this.targetToken) {
-                this.bids.push(this.allOrders[i]);
-            }
-            else if (this.allOrders[i].sourceToken === this.targetToken &&
-                     this.allOrders[i].targetToken === this.sourceToken) {
-                this.asks.push(this.allOrders[i]);
-            }
-        }
+  queueOrders() {
+    this.allOrders.sort(compare);
+    for (let i = 0; i < this.allOrders.length; i++) {
+      if (this.allOrders[i].sourceToken === this.sourceToken &&
+        this.allOrders[i].targetToken === this.targetToken) {
+        this.bids.push(this.allOrders[i]);
+      } else if (this.allOrders[i].sourceToken === this.targetToken &&
+        this.allOrders[i].targetToken === this.sourceToken) {
+        this.asks.push(this.allOrders[i]);
+      }
     }
+  }
 
-    makeTransaction(buyOrder, sellOrder) {
-        return new Transaction(
-            buyOrder._id,
-            sellOrder._id,
-            buyOrder.address,
-            sellOrder.address,
-            buyOrder.sourceToken,
-            buyOrder.targetToken,
-            buyOrder.sourceAmount,
-            buyOrder.targetAmount,
-            buyOrder.expiry,
-            sellOrder.expiry
-        );
-    }
+  makeTransaction(buyOrder, sellOrder) {
+    return new Transaction(
+      buyOrder._id,
+      sellOrder._id,
+      buyOrder.address,
+      sellOrder.address,
+      buyOrder.sourceToken,
+      buyOrder.targetToken,
+      buyOrder.sourceAmount,
+      buyOrder.targetAmount,
+      buyOrder.expiry,
+      sellOrder.expiry
+    );
+  }
 
-    matchTransaction() {
-        this.queueOrders();
-        const transactions = [];
-        while (this.bids.length > 0 && this.asks.length > 0) {
-            const buyOrder = this.bids.shift();
-            const sellOrder = this.asks.shift();
-            if (buyOrder.targetAmount === sellOrder.sourceAmount &&
-                buyOrder.targetAmount / buyOrder.sourceAmount === sellOrder.sourceAmount / sellOrder.targetAmount) {
-                transactions.push(this.makeTransaction(buyOrder, sellOrder));
-            } else if (buyOrder.targetAmount < sellOrder.sourceAmount &&
-                       buyOrder.targetAmount / buyOrder.sourceAmount === sellOrder.sourceAmount / sellOrder.targetAmount) {
-                transactions.push(this.makeTransaction(buyOrder, sellOrder));
-                sellOrder.targetAmount -= buyOrder.sourceAmount;
-                buyOrder.sourceAmount -= sellOrder.targetAmount;
-                this.asks.unshift(sellOrder);
-            } else if (buyOrder.targetAmount > sellOrder.sourceAmount &&
-                       buyOrder.targetAmount / buyOrder.sourceAmount === sellOrder.sourceAmount / sellOrder.targetAmount) {
-                transactions.push(this.makeTransaction(buyOrder, sellOrder));
-                sellOrder.sourceAmount -= buyOrder.targetAmount;
-                buyOrder.sourceAmount -= sellOrder.targetAmount;
-                this.bids.unshift(buyOrder)
-            } else {
-                this.asks.unshift(sellOrder);
-            }
-        }
-        return transactions;
+  matchTransaction() {
+    this.queueOrders();
+    const transactions = [];
+    while (this.bids.length > 0 && this.asks.length > 0) {
+      const buyOrder = this.bids.shift();
+      const sellOrder = this.asks.shift();
+      if (buyOrder.targetAmount === sellOrder.sourceAmount &&
+        buyOrder.targetAmount / buyOrder.sourceAmount === sellOrder.sourceAmount / sellOrder.targetAmount) {
+        transactions.push(this.makeTransaction(buyOrder, sellOrder));
+      } else if (buyOrder.targetAmount < sellOrder.sourceAmount &&
+        buyOrder.targetAmount / buyOrder.sourceAmount === sellOrder.sourceAmount / sellOrder.targetAmount) {
+        transactions.push(this.makeTransaction(buyOrder, sellOrder));
+        sellOrder.targetAmount -= buyOrder.sourceAmount;
+        buyOrder.sourceAmount -= sellOrder.targetAmount;
+        this.asks.unshift(sellOrder);
+      } else if (buyOrder.targetAmount > sellOrder.sourceAmount &&
+        buyOrder.targetAmount / buyOrder.sourceAmount === sellOrder.sourceAmount / sellOrder.targetAmount) {
+        transactions.push(this.makeTransaction(buyOrder, sellOrder));
+        sellOrder.sourceAmount -= buyOrder.targetAmount;
+        buyOrder.sourceAmount -= sellOrder.targetAmount;
+        this.bids.unshift(buyOrder)
+      } else {
+        this.asks.unshift(sellOrder);
+      }
     }
+    return transactions;
+  }
 }
 
 module.exports = OrderEngine;

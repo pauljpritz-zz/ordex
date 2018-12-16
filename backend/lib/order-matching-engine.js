@@ -1,267 +1,278 @@
-//Heapify on startup
+// heapify on startup
 
 const Transaction = require('./transaction');
 
-const parent = i => ((i + 1) >>> 1) - 1;
-const left = i => (i << 1) + 1;
-const right = i => (i + 1) << 1;
+const parent = (i) => ((i + 1) >>> 1) - 1;
+const left = (i) => (i << 1) + 1;
+const right = (i) => (i + 1) << 1;
 
 function exchangeRateAsk(a) {
-    return a.targetAmount / a.sourceAmount;
+  return a.targetAmount / a.sourceAmount;
 }
 
 function exchangeRateBid(a) {
-    return a.sourceAmount / a.targetAmount;
+  return a.sourceAmount / a.targetAmount;
 }
 
 function compareTime(a, b) {
-    const timeA = a.timestamp;
-    const timeB = b.timestamp;
+  return Math.sign(b.timestamp - a.timestamp);
+  // const timeA = a.timestamp;
+  // const timeB = b.timestamp;
 
-    let comparison = 0;
-    if (timeB > timeA) {
-        comparison = 1;
-    } else if (timeB < timeA) {
-        comparison = -1;
-    }
-    return comparison;
+  // let comparison = 0;
+  // if (timeB > timeA) {
+  //   comparison = 1;
+  // } else if (timeB < timeA) {
+  //   comparison = -1;
+  // }
+  // return comparison;
 }
 
 function compareExchangeRateAndTime(a, b) {
-    const ex_r_a = a.sourceAmount / a.targetAmount;
-    const ex_r_b = b.sourceAmount / b.targetAmount;
+  const ex_r_a = a.sourceAmount / a.targetAmount;
+  const ex_r_b = b.sourceAmount / b.targetAmount;
 
-    let comparison = 0;
-    if (ex_r_b > ex_r_a) {
-        comparison = 1;
-    } else if (ex_r_b < ex_r_a) {
-        comparison = -1;
-    } else if (ex_r_b == ex_r_a) {
-        comparison = compareTime(a, b);
-    }
-    return comparison;
+  let comparison = 0;
+  if (ex_r_b > ex_r_a) {
+    comparison = 1;
+  } else if (ex_r_b < ex_r_a) {
+    comparison = -1;
+  } else if (ex_r_b == ex_r_a) {
+    comparison = compareTime(a, b);
+  }
+  return comparison;
 }
 
 class OrderHeap {
-    constructor(target_token, source_token, db, compareFunc, getBlockNumber) {
-        this.compareFunc = compareFunc;
-        this.targetToken = target_token;
-        this.sourceToken = source_token;
-        this.allOrders = db;
-        this.getBlockNumber = getBlockNumber;
-        this.bids = [];
-        this.asks = [];
+  constructor(targetToken, sourceToken, db, getBlockNumber, compareFunc) {
+    this.compareFunc = compareFunc;
+    if (!this.compareFunc) {
+      this.compareFunc = compareExchangeRateAndTime;
     }
+    this.targetToken = targetToken;
+    this.sourceToken = sourceToken;
+    this.allOrders = db;
+    this.getBlockNumber = getBlockNumber;
+    this.bids = [];
+    this.asks = [];
+  }
 
-    heapifyOrders() {
-        console.log(this.sourceToken);
-        console.log(this.allOrders[1].sourceToken);
-        for (let i = 0; i < this.allOrders.length; i++) {
-            if (this.allOrders[i].sourceToken === this.sourceToken &&
-                this.allOrders[i].targetToken === this.targetToken) {
-                this.push(this.bids, this.allOrders[i]);
-            }
-            else if (this.allOrders[i].sourceToken === this.targetToken &&
-                this.allOrders[i].targetToken === this.sourceToken) {
-                this.push(this.asks, this.allOrders[i]);
-            }
+  heapifyOrders() {
+    console.log(this.sourceToken);
+    console.log(this.allOrders[1].sourceToken);
+    for (let i = 0; i < this.allOrders.length; i++) {
+      if (this.allOrders[i].sourceToken === this.sourceToken &&
+        this.allOrders[i].targetToken === this.targetToken) {
+        this.push(this.bids, this.allOrders[i]);
+      } else if (this.allOrders[i].sourceToken === this.targetToken &&
+        this.allOrders[i].targetToken === this.sourceToken) {
+        this.push(this.asks, this.allOrders[i]);
+      }
+    }
+  }
+
+  isExchangeRatesGreater(ask, bid) {
+    if (!ask || !bid) {
+      return false;
+    }
+    return exchangeRateBid(bid) >= exchangeRateAsk(ask);
+  }
+
+  async matchOrders() {
+    const transactions = [];
+    console.log("BidRate: ", exchangeRateBid(await this.peek(this.bids)));
+    console.log("AskRate: ", exchangeRateAsk(await this.peek(this.asks)));
+    /* eslint-disable no-await-in-loop */
+    while (
+      this.isExchangeRatesGreater(await this.peek(this.asks), await this.peek(this.bids))) {
+      const askToExecute = await this.pop(this.asks);
+      while (this.isExchangeRatesGreater(askToExecute, await this.peek(this.bids))) {
+        const bidToExecute = await this.pop(this.bids);
+        if (bidToExecute.targetAmount <= askToExecute.sourceAmount) {
+          // keep ask rate constant and allow bid rate to change
+          askToExecute.targetAmount -= bidToExecute.targetAmount * exchangeRateAsk(askToExecute);
+          bidToExecute.sourceAmount = bidToExecute.targetAmount * exchangeRateAsk(askToExecute);
+          askToExecute.sourceAmount -= bidToExecute.targetAmount;
+          transactions.push(this.makeTransaction(bidToExecute, askToExecute));
+
+          if (bidToExecute.targetAmount > 0) {
+            this.push(this.bids, bidToExecute);
+          }
+        } else if (bidToExecute.sourceAmount > askToExecute.targetAmount) {
+          transactions.push(this.makeTransaction(askToExecute, bidToExecute));
+          bidToExecute.sourceAmount -= askToExecute.targetAmount;
+          bidToExecute.targetAmount -= askToExecute.sourceAmount;
+          // should be done with the exchange rates, adjust this!!
+          if (bidToExecute.sourceAmount > 0) {
+            this.push(this.bids, bidToExecute);
+          }
         }
+      }
     }
+    return transactions;
+  }
 
-    isExchangeRatesGreater(ask, bid) {
-        if (!ask || !bid) {
-            return false;
-        }
-        return exchangeRateBid(bid) >= exchangeRateAsk(ask);
+  makeTransaction(buyOrder, sellOrder) {
+    return new Transaction(
+      buyOrder._id,
+      sellOrder._id,
+      buyOrder.address,
+      sellOrder.address,
+      buyOrder.sourceToken,
+      buyOrder.targetToken,
+      buyOrder.sourceAmount,
+      buyOrder.targetAmount,
+      buyOrder.expiry,
+      sellOrder.expiry
+    );
+  }
+
+  //All the auxiliary heap functions
+  size(side) {
+    return side.length;
+  }
+
+  isEmpty(side) {
+    return side.length === 0;
+  }
+
+  async peek(side) {
+    const val = side[0];
+    const blockNumber = await this.getBlockNumber();
+    if (val && val.expiry && val.expiry < blockNumber) {
+      await this.pop(side, false);
+      return this.peek(side);
+
     }
+    return val;
+  }
 
-    matchOrders() {
-        const transactions = [];
-        console.log("BidRate: ", exchangeRateBid(this.peek(this.bids)));
-        console.log("AskRate: ", exchangeRateAsk(this.peek(this.asks)));
+  push(side, ...values) {
+    values.forEach((value) => {
+      side.push(value);
+      this._siftUp(side);
+    });
+    return this.size(side);
+  }
 
-        while (
-            this.isExchangeRatesGreater(this.peek(this.asks), this.peek(this.bids))) {
-            var ask_to_execute = this.pop(this.asks);
-            while (this.isExchangeRatesGreater(ask_to_execute, this.peek(this.bids))) {
-                var bid_to_execute = this.pop(this.bids);
-                if (bid_to_execute.targetAmount <= ask_to_execute.sourceAmount) {
-                    //Keep ask rate constant and allow bid rate to change
-                    ask_to_execute.targetAmount -= bid_to_execute.targetAmount * exchangeRateAsk(ask_to_execute);
-                    bid_to_execute.sourceAmount = bid_to_execute.targetAmount * exchangeRateAsk(ask_to_execute);
-                    ask_to_execute.sourceAmount -= bid_to_execute.targetAmount;
-                    transactions.push(this.makeTransaction(bid_to_execute, ask_to_execute));
-
-                    if (bid_to_execute.targetAmount > 0) {
-                        this.push(this.bids, bid_to_execute);
-                    }
-                }
-                else if (bid_to_execute.sourceAmount > ask_to_execute.targetAmount) {
-                    transactions.push(this.makeTransaction(ask_to_execute, bid_to_execute));
-                    bid_to_execute.sourceAmount -= ask_to_execute.targetAmount;
-                    bid_to_execute.targetAmount -= ask_to_execute.sourceAmount;
-                    //should be done with the exchange rates, adjust this!!
-                    if (bid_to_execute.sourceAmount > 0) {
-                        this.push(this.bids, bid_to_execute);
-                    }
-                }
-            }
-        }
-        return transactions;
+  async pop(side, retry = true) {
+    if (this.isEmpty(side)) {
+      return null;
     }
-
-    makeTransaction(buyOrder, sellOrder) {
-        return new Transaction(
-            buyOrder._id,
-            sellOrder._id,
-            buyOrder.address,
-            sellOrder.address,
-            buyOrder.sourceToken,
-            buyOrder.targetToken,
-            buyOrder.sourceAmount,
-            buyOrder.targetAmount,
-            buyOrder.expiry,
-            sellOrder.expiry
-        );
+    const poppedVal = side[0];
+    const bottom = this.size(side) - 1;
+    if (bottom > 0) {
+      this._swap(side, 0, bottom);
     }
-
-    //All the auxiliary heap functions
-    size(side) {
-        return side.length;
+    side.pop();
+    this._siftDown(side);
+    const blockNumber = await this.getBlockNumber();
+    if (poppedVal.expiry && poppedVal.expiry < blockNumber && retry) {
+      return this.pop(side, retry);
     }
+    return poppedVal;
+  }
 
-    isEmpty(side) {
-        return side.length == 0;   
+  _greater(side, i, j) {
+    return this.compareFunc(side[i], side[j]);
+  }
+
+  _swap(side, i, j) {
+    [side[i], side[j]] = [side[j], side[i]];
+  }
+
+  _siftUp(side) {
+    let node = this.size(side) - 1;
+    while (node > 0 && this._greater(side, node, parent(node))) {
+      this._swap(side, node, parent(node));
+      node = parent(node);
     }
+  }
 
-    peek(side) {
-        var val = side[0];
-        if (val && val.expiry && val.expiry < this.getBlockNumber()) {
-            this.pop(side, false);
-            return this.peek(side);
-            
-        }
-        return val;
+  _siftDown(side) {
+    let node = 0;
+
+    while (
+      (left(node) < this.size(side) && this._greater(side, left(node), node)) ||
+      (right(node) < this.size(side) && this._greater(side, right(node), node))) {
+      let maxChild = (right(node) < this.size(side) && this._greater(side, right(node), left(node))) ? right(node) : left(node);
+      this._swap(side, node, maxChild);
+      node = maxChild;
     }
-
-    push(side, ...values) {
-        values.forEach(value => {
-            side.push(value);
-            this._siftUp(side);
-        });
-        return this.size(side);
-    }
-
-    pop(side, retry = true) {
-        if (this.isEmpty(side)) {
-            return null;
-        }
-        const poppedVal = side[0];
-        const bottom = this.size(side) - 1;
-        if (bottom > 0) {
-            this._swap(side, 0, bottom);
-        }
-        side.pop();
-        this._siftDown(side);
-        if (poppedVal.expiry && poppedVal.expiry < this.getBlockNumber() && retry) {
-            return this.pop(side, retry);
-        }
-        return poppedVal;
-    }
-
-    _greater(side, i, j) {
-        return this.compareFunc(side[i], side[j]);
-    }
-
-    _swap(side, i, j) {
-        [side[i], side[j]] = [side[j], side[i]];
-    }
-
-    _siftUp(side) {
-        let node = this.size(side) - 1;
-        while (node > 0 && this._greater(side, node, parent(node))) {
-            this._swap(side, node, parent(node));
-            node = parent(node);
-        }
-    }
-
-    _siftDown(side) {
-        let node = 0;
-
-        while (
-            (left(node) < this.size(side) && this._greater(side, left(node), node)) ||
-            (right(node) < this.size(side) && this._greater(side, right(node), node))) {
-            let maxChild = (right(node) < this.size(side) && this._greater(side, right(node), left(node))) ? right(node) : left(node);
-            this._swap(side, node, maxChild);
-            node = maxChild;
-        }
-    }
+  }
 }
+
+module.exports = OrderHeap;
 
 
 //TESTS
 
-test_order1 = {}
-test_order1["address"] = "addr1";
-test_order1["sourceToken"] = "ETH";
-test_order1["targetToken"] = "BTC";
-test_order1["targetAmount"] = 100;
-test_order1["sourceAmount"] = 100;
-test_order1["timestamp"] = 10;
-test_order1["expiry"] = 10;
+const testOrder1 = {
+  address: "addr1",
+  sourceToken: "ETH",
+  targetToken: "BTC",
+  targetAmount: 100,
+  sourceAmount: 100,
+  timestamp: 10,
+  expiry: 10,
+};
 
+const testOrder2 = {
+  address: "addr2",
+  sourceToken: "BTC",
+  targetToken: "ETH",
+  targetAmount: 100,
+  sourceAmount: 100,
+  timestamp: 10,
+  expiry: 10,
+};
 
-test_order2 = {}
-test_order2["address"] = "addr2";
-test_order2["sourceToken"] = "BTC";
-test_order2["targetToken"] = "ETH";
-test_order2["targetAmount"] = 100;
-test_order2["sourceAmount"] = 100;
-test_order2["timestamp"] = 10;
-test_order2["expiry"] = 10;
+const testOrder3 = {
+  address: "addr3",
+  sourceToken: "BTC",
+  targetToken: "ETH",
+  targetAmount: 90,
+  sourceAmount: 100,
+  timestamp: 10,
+  expiry: 10,
+};
 
-test_order3 = {}
-test_order3["address"] = "addr3";
-test_order3["sourceToken"] = "BTC";
-test_order3["targetToken"] = "ETH";
-test_order3["targetAmount"] = 90;
-test_order3["sourceAmount"] = 100;
-test_order3["timestamp"] = 10;
-test_order3["expiry"] = 10;
+const testOrder4 = {
+  address: "addr4",
+  sourceToken: "ETH",
+  targetToken: "BTC",
+  targetAmount: 50,
+  sourceAmount: 45,
+  timestamp: 10,
+  expiry: 10,
+};
 
-test_order4 = {}
-test_order4["address"] = "addr4";
-test_order4["sourceToken"] = "ETH";
-test_order4["targetToken"] = "BTC";
-test_order4["targetAmount"] = 50;
-test_order4["sourceAmount"] = 45;
-test_order4["timestamp"] = 10;
-test_order4["expiry"] = 10;
+const testOrder5 = {
+  address: "addr5",
+  sourceToken: "ETH",
+  targetToken: "BTC",
+  targetAmount: 75,
+  sourceAmount: 69,
+  timestamp: 10,
+  expiry: 8,
+};
 
-test_order5 = {}
-test_order5["address"] = "addr5";
-test_order5["sourceToken"] = "ETH";
-test_order5["targetToken"] = "BTC";
-test_order5["targetAmount"] = 75;
-test_order5["sourceAmount"] = 69;
-test_order5["timestamp"] = 10;
-test_order5["expiry"] = 8;
+const testOrders = [testOrder1, testOrder2, testOrder3, testOrder4, testOrder5];
+console.log(testOrders[0])
 
-test_orders = [test_order1, test_order2, test_order3, test_order4, test_order5];
-console.log(test_orders[0])
+const testOrderBook = new OrderHeap("ETH", "BTC", testOrders, () => Promise.resolve(9));
+console.log("Pair: ", testOrderBook.sourceToken, testOrderBook.targetToken);
+console.log("Order book:", testOrderBook.allOrders)
 
-test_order_book = new OrderHeap("ETH", "BTC", test_orders, compareExchangeRateAndTime, () => 9);
-console.log("Pair: ", test_order_book.sourceToken, test_order_book.targetToken);
-console.log("Order book:", test_order_book.allOrders)
+// test_order_book.push(test_order_book.bids, test_order5);
 
-//test_order_book.push(test_order_book.bids, test_order5);
+const testSize = testOrderBook.size(testOrderBook.asks);
+console.log("Test size: ", testSize);
 
-test_size = test_order_book.size(test_order_book.asks);
-console.log("Test size: ", test_size);
+testOrderBook.heapifyOrders();
+console.log("Asks: ", testOrderBook.asks);
+console.log("Bids: ", testOrderBook.bids);
 
-test_order_book.heapifyOrders();
-console.log("Asks: ", test_order_book.asks);
-console.log("Bids: ", test_order_book.bids);
-
-test_transactions = test_order_book.matchOrders();
-console.log("Transactions: ", test_transactions);
+testOrderBook.matchOrders().then((testTransactions) => {
+  console.log("Transactions: ", testTransactions);
+});

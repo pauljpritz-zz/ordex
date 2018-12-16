@@ -104,7 +104,7 @@ rules:
   no-array-constructor: error
   no-async-promise-executor: error
   no-await-in-loop: error
-  no-bitwise: error
+  no-bitwise: 'off'
   no-buffer-constructor: error
   no-caller: error
   no-catch-shadow: error
@@ -177,7 +177,7 @@ rules:
   no-trailing-spaces: error
   no-undef-init: error
   no-undefined: error
-  no-underscore-dangle: error
+  no-underscore-dangle: 'off'
   no-unmodified-loop-condition: error
   no-unneeded-ternary: error
   no-unused-expressions: error
