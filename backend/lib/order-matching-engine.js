@@ -67,6 +67,13 @@ class OrderMatchingEngine {
     return exchangeRateBid(bid) >= exchangeRateAsk(ask);
   }
 
+    isNonZeroOrder(order) {
+        if (!order || order.targetAmount <= 0 || order.sourceAmount <= 0) {
+            return false;
+        }
+        return true;
+    }
+
   async matchOrders() {
     const transactions = [];
     // console.log("BidRate: ", exchangeRateBid(await this.peek(this.bids)));
@@ -75,24 +82,25 @@ class OrderMatchingEngine {
     while (
       this.isExchangeRatesGreater(await this.peek(this.asks), await this.peek(this.bids))) {
       const askToExecute = await this.pop(this.asks);
-      while (this.isExchangeRatesGreater(askToExecute, await this.peek(this.bids))) {
-        const bidToExecute = await this.pop(this.bids);
-        if (bidToExecute.targetAmount <= askToExecute.sourceAmount) {
+      while (this.isExchangeRatesGreater(askToExecute, await this.peek(this.bids)) && this.isNonZeroOrder(askToExecute)) {
+
+          const bidToExecute = await this.pop(this.bids);
+        if (bidToExecute.targetAmount <= askToExecute.sourceAmount && this.isNonZeroOrder(bidToExecute)) {
           // keep ask rate constant and allow bid rate to change
           askToExecute.targetAmount -= bidToExecute.targetAmount * exchangeRateAsk(askToExecute);
           bidToExecute.sourceAmount = bidToExecute.targetAmount * exchangeRateAsk(askToExecute);
           askToExecute.sourceAmount -= bidToExecute.targetAmount;
           transactions.push(this.makeTransaction(bidToExecute, askToExecute));
 
-          if (bidToExecute.targetAmount > 0) {
+          if (this.isNonZeroOrder(bidToExecute)) {
             this.push(this.bids, bidToExecute);
           }
-        } else if (bidToExecute.sourceAmount > askToExecute.targetAmount) {
+        } else if (bidToExecute.sourceAmount > askToExecute.targetAmount, this.isNonZeroOrder(bidToExecute)) {
           transactions.push(this.makeTransaction(askToExecute, bidToExecute));
           bidToExecute.sourceAmount -= askToExecute.targetAmount;
           bidToExecute.targetAmount -= askToExecute.sourceAmount;
           // should be done with the exchange rates, adjust this!!
-          if (bidToExecute.sourceAmount > 0) {
+          if (this.isNonZeroOrder(bidToExecute)) {
             this.push(this.bids, bidToExecute);
           }
         }
