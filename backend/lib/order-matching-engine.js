@@ -2,9 +2,9 @@
 
 const Transaction = require('./transaction');
 
-const parent = (i) => ((i + 1) >>> 1) - 1;
-const left = (i) => (i << 1) + 1;
-const right = (i) => (i + 1) << 1;
+const parent = (i) => Math.floor(((i - 1) / 2));
+const left = (i) => (2 * i) + 1;
+const right = (i) => (2 * i) + 2;
 
 function exchangeRateAsk(a) {
   return a.targetAmount / a.sourceAmount;
@@ -24,9 +24,9 @@ function compareExchangeRateAndTime(a, b) {
 
   let comparison = 0;
   if (exchangeRateB > exchangeRateA) {
-    comparison = 1;
+    comparison = 0;
   } else if (exchangeRateB < exchangeRateA) {
-    comparison = -1;
+    comparison = 1;
   } else if (exchangeRateB == exchangeRateA) {
     comparison = compareTime(a, b);
   }
@@ -74,23 +74,24 @@ class OrderMatchingEngine {
         return true;
     }
 
-  async matchOrders() {
+  matchOrders() {
     const transactions = [];
     // console.log("BidRate: ", exchangeRateBid(await this.peek(this.bids)));
     // console.log("AskRate: ", exchangeRateAsk(await this.peek(this.asks)));
     /* eslint-disable no-await-in-loop */
     while (
-      this.isExchangeRatesGreater(await this.peek(this.asks), await this.peek(this.bids))) {
-      const askToExecute = await this.pop(this.asks);
-      while (this.isExchangeRatesGreater(askToExecute, await this.peek(this.bids)) && this.isNonZeroOrder(askToExecute)) {
+      this.isExchangeRatesGreater(this.peek(this.asks), this.peek(this.bids))) {
+        const askToExecute = this.pop(this.asks);
+      while (this.isExchangeRatesGreater(askToExecute, this.peek(this.bids)) && this.isNonZeroOrder(askToExecute)) {
 
-          const bidToExecute = await this.pop(this.bids);
+          const bidToExecute = this.pop(this.bids);
         if (bidToExecute.targetAmount <= askToExecute.sourceAmount && this.isNonZeroOrder(bidToExecute)) {
           // keep ask rate constant and allow bid rate to change
-          askToExecute.targetAmount -= bidToExecute.targetAmount * exchangeRateAsk(askToExecute);
           bidToExecute.sourceAmount = bidToExecute.targetAmount * exchangeRateAsk(askToExecute);
+          askToExecute.targetAmount -= bidToExecute.targetAmount * exchangeRateAsk(askToExecute);
           askToExecute.sourceAmount -= bidToExecute.targetAmount;
           transactions.push(this.makeTransaction(bidToExecute, askToExecute));
+          bidToExecute.targetAmount = 0;
 
           if (this.isNonZeroOrder(bidToExecute)) {
             this.push(this.bids, bidToExecute);
@@ -99,7 +100,7 @@ class OrderMatchingEngine {
           transactions.push(this.makeTransaction(askToExecute, bidToExecute));
           bidToExecute.sourceAmount -= askToExecute.targetAmount;
           bidToExecute.targetAmount -= askToExecute.sourceAmount;
-          // should be done with the exchange rates, adjust this!!
+          askToExecute.sourceAmount = 0;
           if (this.isNonZeroOrder(bidToExecute)) {
             this.push(this.bids, bidToExecute);
           }
@@ -133,11 +134,11 @@ class OrderMatchingEngine {
     return side.length === 0;
   }
 
-  async peek(side) {
+  peek(side) {
     const val = side[0];
-    const blockNumber = await this.getBlockNumber();
+    const blockNumber = this.getBlockNumber();
     if (val && val.expiry && val.expiry < blockNumber) {
-      await this.pop(side, false);
+      this.pop(side, false);
       return this.peek(side);
 
     }
@@ -152,7 +153,7 @@ class OrderMatchingEngine {
     return this.size(side);
   }
 
-  async pop(side, retry = true) {
+  pop(side, retry = true) {
     if (this.isEmpty(side)) {
       return null;
     }
@@ -163,7 +164,7 @@ class OrderMatchingEngine {
     }
     side.pop();
     this._siftDown(side);
-    const blockNumber = await this.getBlockNumber();
+    const blockNumber = this.getBlockNumber();
     if (poppedVal.expiry && poppedVal.expiry < blockNumber && retry) {
       return this.pop(side, retry);
     }
@@ -175,11 +176,11 @@ class OrderMatchingEngine {
   }
 
   _swap(side, i, j) {
-    [side[i], side[j]] = [side[j], side[i]];
+      [side[i], side[j]] = [side[j], side[i]];
   }
 
   _siftUp(side) {
-    let node = this.size(side) - 1;
+      let node = this.size(side) - 1;
     while (node > 0 && this._greater(side, node, parent(node))) {
       this._swap(side, node, parent(node));
       node = parent(node);
@@ -200,3 +201,42 @@ class OrderMatchingEngine {
 }
 
 module.exports = OrderMatchingEngine;
+
+/*
+//Tests
+function makeOrder(address, sourceToken, targetToken, sourceAmount, targetAmount, isExpired) {
+    return {
+        address, sourceToken, targetToken, sourceAmount, targetAmount,
+        timestamp: 10, expiry: isExpired ? 8 : 10
+    };
+}
+
+function makeOrders(lastIsExpired) {
+    const testOrder1 = makeOrder('addr1', 'ETH', 'BTC', 100, 100, false);
+    const testOrder2 = makeOrder('addr2', 'BTC', 'ETH', 100, 100, false);
+    const testOrder3 = makeOrder('addr3', 'BTC', 'ETH', 100, 90, false);
+    const testOrder4 = makeOrder('addr4', 'ETH', 'BTC', 45, 50, false);
+    const testOrder5 = makeOrder('addr5', 'ETH', 'BTC', 69, 75, lastIsExpired);
+    const testOrder6 = makeOrder('addr6', 'BTC', 'ETH', 30, 20, false);
+
+    return [testOrder1, testOrder2, testOrder3, testOrder4, testOrder5, testOrder6];
+}
+
+
+const orders = makeOrders(false);
+let testEngine = new OrderMatchingEngine('BTC', 'ETH', orders, () => 9, compareExchangeRateAndTime);
+
+console.log("all bids", testEngine.bids);
+//console.log("bids", testEngine.pop(testEngine.bids));
+//console.log("bids", testEngine.pop(testEngine.bids));
+
+var testask = testEngine.asks[0];
+console.log("asks", testEngine.asks);
+
+
+const transactions = testEngine.matchOrders();
+console.log(transactions)
+
+
+console.log("all asks after transaction", testEngine.asks);
+*/
