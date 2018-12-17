@@ -32,7 +32,7 @@
               </md-table-row>
               <md-table-row v-for="tokenBalance in balances" :key="tokenBalance.address">
                 <md-table-cell>{{ tokenBalance.name }}</md-table-cell>
-                <md-table-cell>{{ tokenBalance.balance }}</md-table-cell>
+                <md-table-cell>{{ tokenBalance.balance.toFixed(2) }}</md-table-cell>
               </md-table-row>
             </md-table>
             <router-link class="button" to="/exchange-tokens">Exchange tokens</router-link>

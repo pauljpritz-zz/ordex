@@ -116,8 +116,8 @@ class OrderMatchingEngine {
       sellOrder.address,
       buyOrder.sourceToken,
       buyOrder.targetToken,
-      buyOrder.sourceAmount,
-      buyOrder.targetAmount,
+      Math.round(buyOrder.sourceAmount),
+      Math.round(buyOrder.targetAmount),
       buyOrder.expiry,
       sellOrder.expiry
     );
