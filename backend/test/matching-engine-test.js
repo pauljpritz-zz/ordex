@@ -14,14 +14,15 @@ function makeOrders(lastIsExpired) {
   const testOrder3 = makeOrder('addr3', 'BTC', 'ETH', 100, 90, false);
   const testOrder4 = makeOrder('addr4', 'ETH', 'BTC', 45, 50, false);
   const testOrder5 = makeOrder('addr5', 'ETH', 'BTC', 69, 75, lastIsExpired);
+  const testOrder6 = makeOrder('addr6', 'BTC', 'ETH', 30, 20, false);
 
-  return [testOrder1, testOrder2, testOrder3, testOrder4, testOrder5];
+  return [testOrder1, testOrder2, testOrder3, testOrder4, testOrder5, testOrder6];
 }
 
 
 describe('OrderHeap', function () {
   function makeMatchingEngine(orders) {
-    return new OrderMatchingEngine('ETH', 'BTC', orders, () => Promise.resolve(9));
+    return new OrderMatchingEngine('BTC', 'ETH', orders, () => Promise.resolve(9));
   }
 
   it('should work in simple cases', async function () {
@@ -37,14 +38,17 @@ describe('OrderHeap', function () {
   it('should match multiple transcations', async function () {
     const engine = makeMatchingEngine(makeOrders(false));
     const transactions = await engine.matchOrders();
-    assert.equal(transactions.length, 2);
-    assert.equal(transactions[0].sourceAmount, 69);
-    assert.equal(transactions[0].targetAmount, 75);
+    assert.equal(transactions.length, 3);
+    assert.equal(transactions[0].sourceAmount, 30);
+    assert.equal(transactions[0].targetAmount, 20);
   });
 
   it('should not use expired transcations', async function () {
     const engine = makeMatchingEngine(makeOrders(true));
     const transactions = await engine.matchOrders();
-    assert.equal(transactions.length, 1);
+    for (const transaction of transactions) {
+      assert.notEqual(transaction.buyer, 'addr5');
+      assert.notEqual(transaction.seller, 'addr5');
+    }
   });
 });
