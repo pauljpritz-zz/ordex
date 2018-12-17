@@ -18,8 +18,8 @@ contract ERC20_2 is IERC20 {
 
   constructor(string _name) public {
     name = _name;
-    _mint(msg.sender, 20);
-    emit Balance(msg.sender, 20);
+    _mint(msg.sender, 20000000000);
+    emit Balance(msg.sender, 20000000000);
   }
 
   /**

@@ -21,14 +21,17 @@ class W3Manager:
         account_address = self._get_address(account_address)
         token_address = self._get_address(token_address)
         contract = self.get_erc20_contract(token_address)
-        print(contract.functions.balanceOf(account_address).call())
+        balance = contract.functions.balanceOf(account_address).call()
+        balance /= 1e9
+        print(balance)
 
     def transfer_tokens(self, token_address, from_address, to_address, amount):
         token_address = self._get_address(token_address)
         from_address = self._get_address(from_address)
         to_address = self._get_address(to_address)
         contract = self.get_erc20_contract(token_address)
-        contract.functions.transfer(to_address, amount).transact({"from": from_address})
+        amount *= 1e9
+        contract.functions.transfer(to_address, int(amount)).transact({"from": from_address})
 
     def show_allowance(self, token_address, account_address, spender_address=None):
         if spender_address is None:
@@ -37,7 +40,8 @@ class W3Manager:
         token_address = self._get_address(token_address)
         spender_address = self._get_address(spender_address)
         contract = self.get_erc20_contract(token_address)
-        print(contract.functions.allowance(account_address, spender_address).call())
+        allowance = contract.functions.allowance(account_address, spender_address).call()
+        print(allowance / 1e9)
 
     def get_erc20_contract(self, address):
         return self.w3.eth.contract(abi=self.erc20_abi, address=address)

@@ -113,6 +113,7 @@ import { getTokens } from '../http';
 import { sendOrder, getBalances } from '../order-handler';
 import store from '../store';
 import router from '../router';
+import config from '../config';
 
 export default {
   name: 'ExchangeTokens',
@@ -185,7 +186,10 @@ export default {
         const { expiryDate, expiryTime, ...payload } = Object.assign({
           address: store.account,
           expiry,
-        }, this.form);
+        }, this.form, {
+          sourceAmount: this.form.sourceAmount * config.multiplier,
+          targetAmount: this.form.targetAmount * config.multiplier,
+        });
 
         this.sending = true;
 

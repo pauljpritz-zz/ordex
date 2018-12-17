@@ -5,6 +5,7 @@ const Validator = require('jsonschema').Validator;
 
 const schemas = require('./schemas');
 const OrderEngine = require('./order-engine');
+const MatchingEngine = require('./order-matching-engine');
 const ordex = require('./OrDex.json');
 const config = require('./config');
 const tokensInfo = require('./tokens.json');
@@ -68,13 +69,13 @@ class OrderProcessor {
   }
 
   unregister(ws, args) {
-      if (!args.address) {
-        console.error('missing address');
-        return;
-      }
-      console.log(`unregistered address ${args.address}`);
-      Reflect.deleteProperty(this.clients, args.address);
+    if (!args.address) {
+      console.error('missing address');
+      return;
     }
+    console.log(`unregistered address ${args.address}`);
+    Reflect.deleteProperty(this.clients, args.address);
+  }
 
   publishOffer(offer) {
     const id = uuid();
@@ -83,10 +84,13 @@ class OrderProcessor {
     })
   }
 
-  searchForAvailableTransactions(lastOffer) {
+  async searchForAvailableTransactions(lastOffer) {
     const offers = this.db.offers.query(() => true);
-    const engine = new OrderEngine(lastOffer.sourceToken, lastOffer.targetToken, offers);
-    const transactions = engine.matchTransaction();
+    // const engine = new OrderEngine(lastOffer.sourceToken, lastOffer.targetToken, offers);
+    const getBlockNumber = () => this.w3.eth.getBlockNumber();
+    const engine = new MatchingEngine(lastOffer.sourceToken, lastOffer.targetToken,
+                                      offers, getBlockNumber);
+    const transactions = await engine.matchOrders();
     for (const transaction of transactions) {
       console.log(transaction);
       this.multicastTransaction(transaction);
@@ -131,7 +135,7 @@ class OrderProcessor {
 
     if (transaction.signatures[0] && transaction.signatures[1]) {
       await this.executeTransaction(transaction);
-      console.log('transaction executed on THE BLOCKCHAIN');
+      console.log('transaction executed');
       await this.updateDbOrderBook(transaction);
       await this.db.transactions.del(input.id);
       notifyClient(0);

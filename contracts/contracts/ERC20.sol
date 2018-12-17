@@ -26,8 +26,8 @@ contract ERC20 is IERC20 {
 
   constructor(string _name) public {
     name = _name;
-    _mint(msg.sender, 10);
-    emit Balance(msg.sender, 10);
+    _mint(msg.sender, 10000000000);
+    emit Balance(msg.sender, 10000000000);
   }
 
   function printName() public view returns (uint256) {
