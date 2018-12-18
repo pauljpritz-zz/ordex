@@ -5,7 +5,7 @@ const Validator = require('jsonschema').Validator;
 
 const schemas = require('./schemas');
 const OrderEngine = require('./order-engine');
-const MatchingEngine = require('./order-matching-engine');
+const {OrderMatchingEngine} = require('../lib/order-matching-engine');
 const ordex = require('./OrDex.json');
 const config = require('./config');
 const tokensInfo = require('./tokens.json');
@@ -88,8 +88,8 @@ class OrderProcessor {
     const offers = this.db.offers.query(() => true);
     // const engine = new OrderEngine(lastOffer.sourceToken, lastOffer.targetToken, offers);
     const getBlockNumber = () => this.w3.eth.getBlockNumber();
-    const engine = new MatchingEngine(lastOffer.sourceToken, lastOffer.targetToken,
-                                      offers, getBlockNumber);
+    const engine = new OrderMatchingEngine(lastOffer.sourceToken, lastOffer.targetToken,
+                                           offers, getBlockNumber);
     const transactions = await engine.matchOrders();
     for (const transaction of transactions) {
       console.log(transaction);

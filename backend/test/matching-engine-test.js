@@ -1,7 +1,7 @@
 const chai = require('chai');
 const assert = chai.assert;
 
-const OrderMatchingEngine = require('../lib/order-matching-engine');
+const orderEngine = require('../lib/order-matching-engine');
 
 function makeOrder(address, sourceToken, targetToken, sourceAmount, targetAmount, isExpired) {
   return {address, sourceToken, targetToken, sourceAmount, targetAmount,
@@ -20,9 +20,32 @@ function makeOrders(lastIsExpired) {
 }
 
 
+describe('utility functions', function () {
+  describe('compareExchangeRateAndTime', function () {
+    it('should work with different exchange rates', function () {
+      const a = {sourceAmount: 1, targetAmount: 2};
+      let b = {sourceAmount: 1, targetAmount: 3};
+      assert.equal(orderEngine.compareExchangeRateAndTime(a, b), -1);
+      b = {sourceAmount: 1, targetAmount: 1};
+      assert.equal(orderEngine.compareExchangeRateAndTime(a, b), 1);
+    });
+
+    it('should work with equal exchange rates', function () {
+      const a = {sourceAmount: 1, targetAmount: 1, timestamp: 2};
+      let b = {sourceAmount: 1, targetAmount: 1, timestamp: 1};
+      assert.equal(orderEngine.compareExchangeRateAndTime(a, b), -1);
+      b = {sourceAmount: 1, targetAmount: 1, timestamp: 3};
+      assert.equal(orderEngine.compareExchangeRateAndTime(a, b), 1);
+      b = {sourceAmount: 1, targetAmount: 1, timestamp: 2};
+      assert.equal(orderEngine.compareExchangeRateAndTime(a, b), 0);
+    });
+  })
+});
+
+
 describe('OrderHeap', function () {
   function makeMatchingEngine(orders) {
-    return new OrderMatchingEngine('BTC', 'ETH', orders, () => Promise.resolve(9));
+    return new orderEngine.OrderMatchingEngine('BTC', 'ETH', orders, () => Promise.resolve(9));
   }
 
   it('should work in simple cases', async function () {

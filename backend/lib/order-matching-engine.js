@@ -19,19 +19,14 @@ function compareTime(a, b) {
 }
 
 function compareExchangeRateAndTime(a, b) {
-  const exchangeRateA = a.sourceAmount / a.targetAmount;
-  const exchangeRateB = b.sourceAmount / b.targetAmount;
-
-  let comparison = 0;
-  if (exchangeRateB > exchangeRateA) {
-    comparison = 0;
-  } else if (exchangeRateB < exchangeRateA) {
-    comparison = 1;
-  } else if (exchangeRateB == exchangeRateA) {
-    comparison = compareTime(a, b);
+  const exchangeRateA = exchangeRateBid(a);
+  const exchangeRateB = exchangeRateBid(b);
+  if (exchangeRateA === exchangeRateB) {
+    return compareTime(a, b);
   }
-  return comparison;
+  return Math.sign(exchangeRateB - exchangeRateA);
 }
+exports.compareExchangeRateAndTime = compareExchangeRateAndTime;
 
 class OrderMatchingEngine {
   constructor(targetToken, sourceToken, db, getBlockNumber, compareFunc) {
@@ -170,15 +165,15 @@ class OrderMatchingEngine {
   }
 
   _greater(side, i, j) {
-    return this.compareFunc(side[i], side[j]);
+    return this.compareFunc(side[i], side[j]) <= 0;
   }
 
   _swap(side, i, j) {
-      [side[i], side[j]] = [side[j], side[i]];
+    [side[i], side[j]] = [side[j], side[i]];
   }
 
   _siftUp(side) {
-      let node = this.size(side) - 1;
+    let node = this.size(side) - 1;
     while (node > 0 && this._greater(side, node, parent(node))) {
       this._swap(side, node, parent(node));
       node = parent(node);
@@ -198,4 +193,4 @@ class OrderMatchingEngine {
   }
 }
 
-module.exports = OrderMatchingEngine;
+exports.OrderMatchingEngine = OrderMatchingEngine;
